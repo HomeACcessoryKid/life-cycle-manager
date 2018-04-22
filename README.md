@@ -43,10 +43,24 @@ If you feel you need 100% control, you can fork this repository, create your own
 But since the code of LCM is public, by audit it is unlikely that malicious events will happen. It is up to you. And if you have ideas how to improve on this subject, please share your ideas in the issue #1 that is open for this reason.
 
 ## How to use it
-todo
+User part  
+- compile your own code and create a signature (see below).
+- commit this to Git and sync it with GitHub
+- Start a release from this commit and take care the version is in x.y.z format
+- Attach/pload the binary and the signature and create the release (it should now be marked as 'latest release')
+
+LCM part
+- Clone or fork the LCM repository, wipe out the entire flash (not essential, but cleaner) and upload the otaboot.bin
+- start the code and wait till the Wifi AP starts.  
+- select your Wifi and also set the repository you want to use in your device. yourname/repositry  and name of binary
+- once selected, it will take up to 5 minutes for the system to upload the ota-main software in the second bootsector and the user code in the 1st boot sector
 
 ## How it works
 todo
 
 ## Creating a user app DigitalSignature
-todo
+from the directory where `make` is run execute:
+```
+openssl sha384 -binary -out firmware/main.bin.sig firmware/main.bin
+printf "%08x" `cat firmware/main.bin | wc -c`| xxd -r -p >>firmware/main.bin.sig
+```
