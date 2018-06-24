@@ -1,7 +1,9 @@
 # life-cycle-manager (LCM)
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub
 
-this readme is under construction...
+this readme is under construction...  
+Meanwhile, the development area is at https://github.com/HomeACcessoryKid/ota  
+Be aware that this area could show instability while testing alpha and beta versions!!
 
 ## Scope
 This is a program that allows any simple repository based on esp-open-rtos on esp8266 to solve its life cycle tasks.
