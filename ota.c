@@ -18,6 +18,8 @@
 #include <sysparam.h>
 #include <rboot-api.h>
 
+#include <udplogger.h>
+
 static int  verify = 1;
 static byte file_first_byte[1];
 ecc_key prvecckey;
@@ -33,7 +35,7 @@ void MyLoggingCallback(const int logLevel, const char* const logMessage) {
 #endif
 
 void  ota_init() {
-    printf("--- ota_init\n");
+    UDPLOG("--- ota_init\n");
     
     //rboot setup
     rboot_config conf;

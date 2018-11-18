@@ -15,6 +15,7 @@
 #include <sysparam.h>
 
 #include <ota.h>
+#include <udplogger.h>
 
 void ota_task(void *arg) {
     int holdoff_time=1; //32bit, in seconds
@@ -31,8 +32,8 @@ void ota_task(void *arg) {
     int keyid,foundkey=0;
     char keyname[KEYNAMELEN];
     
-    if (ota_boot()) printf("OTABOOT "); else printf("OTAMAIN ");
-    printf("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
+    if (ota_boot()) UDPLOG("OTABOOT "); else UDPLOG("OTAMAIN ");
+    UDPLOG("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
 
     ota_init();
     
@@ -173,6 +174,7 @@ void ota_task(void *arg) {
 }
 
 void on_wifi_ready() {
+    xTaskCreate(udplog_send, "logsend", 256, NULL, 4, NULL);
     xTaskCreate(ota_task,"ota",4096,NULL,1,NULL);
     printf("wifiready-done\n");
 }
