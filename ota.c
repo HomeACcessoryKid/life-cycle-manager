@@ -1,4 +1,4 @@
-#include <stdlib.h>  //for printf
+#include <stdlib.h>  //for UDPLOG
 #include <stdio.h>
 #include <string.h>
 
@@ -30,7 +30,7 @@ WOLFSSL_CTX* ctx;
 #ifdef DEBUG_WOLFSSL    
 void MyLoggingCallback(const int logLevel, const char* const logMessage) {
     /*custom logging function*/
-    printf("loglevel: %d - %s\n",logLevel, logMessage);
+    UDPLOG("loglevel: %d - %s\n",logLevel, logMessage);
 }
 #endif
 
@@ -54,7 +54,7 @@ void  ota_init() {
 	sntp_set_servers(servers, sizeof(servers) / sizeof(char*)); //Servers must be configured right after initialization
 
 #ifdef DEBUG_WOLFSSL    
-    if (wolfSSL_SetLoggingCb(MyLoggingCallback)) printf("error setting debug callback\n");
+    if (wolfSSL_SetLoggingCb(MyLoggingCallback)) UDPLOG("error setting debug callback\n");
 #endif
     
     wolfSSL_Init();
@@ -74,25 +74,25 @@ void  ota_init() {
     active_cert_sector=HIGHERCERTSECTOR;
     backup_cert_sector=LOWERCERTSECTOR;
     if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) { //get first 4 active
-        printf("error reading flash\n");
+        UDPLOG("error reading flash\n");
     } // if OTHER  vvvvvv sector active
     if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 ) {
         active_cert_sector=LOWERCERTSECTOR;
         backup_cert_sector=HIGHERCERTSECTOR;
         if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) {
-            printf("error reading flash\n");
+            UDPLOG("error reading flash\n");
         }
         if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 ) {
             active_cert_sector=0;
             backup_cert_sector=0;
         }
     }
-    printf("active_sector: 0x%x\n",active_cert_sector);
+    UDPLOG("active_sector: 0x%x\n",active_cert_sector);
     ota_set_verify(0);
 }
 
 int ota_get_privkey() {
-    printf("--- ota_get_privkey\n");
+    UDPLOG("--- ota_get_privkey\n");
     
     byte buffer[PKEYSIZE]; //maybe 49 bytes would be enough
     int ret;
@@ -101,7 +101,7 @@ int ota_get_privkey() {
     
     //load private key as produced by openssl
     if (!spiflash_read(backup_cert_sector, (byte *)buffer, 24)) {
-        printf("error reading flash\n");    return -1;
+        UDPLOG("error reading flash\n");    return -1;
     }
     if (buffer[0]!=0x30 || buffer[1]!=0x81) return -2; //not a valid keyformat
     if (buffer[3]!=0x02 || buffer[4]!=0x01 || buffer[5]!=0x01) return -2; //not a valid keyformat
@@ -110,12 +110,12 @@ int ota_get_privkey() {
     length=buffer[idx++]; //bitstring start
     
     if (!spiflash_read(backup_cert_sector+idx, (byte *)buffer, length)) {
-        printf("error reading flash\n");    return -1;
+        UDPLOG("error reading flash\n");    return -1;
     }
-    for (idx=0;idx<length;idx++) printf(" %02x",buffer[idx]);
+    for (idx=0;idx<length;idx++) UDPLOG(" %02x",buffer[idx]);
     wc_ecc_init(&prvecckey);
     ret=wc_ecc_import_private_key_ex(buffer, length, NULL, 0, &prvecckey,ECC_SECP384R1);
-    printf("\nret: %d\n",ret);
+    UDPLOG("\nret: %d\n",ret);
     
     /*
     */
@@ -123,34 +123,34 @@ int ota_get_privkey() {
 }
 
 int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, report filesize
-    printf("--- ota_get_pubkey\n");
+    UDPLOG("--- ota_get_pubkey\n");
     
     byte buf[PKEYSIZE];
     byte * buffer=buf;
     int length,ret;
     //load public key as produced by openssl
     if (!spiflash_read(sector, (byte *)buffer, PKEYSIZE)) {
-        printf("error reading flash\n");    return -1;
+        UDPLOG("error reading flash\n");    return -1;
     }
     if (buffer[ 0]!=0x30 || buffer[ 1]!=0x76 || buffer[ 2]!=0x30) return -2; //not a valid keyformat
     if (buffer[20]!=0x03 || buffer[21]!=0x62 || buffer[22]!=0x00) return -2; //not a valid keyformat
     length=97;
     
-    int idx; for (idx=0;idx<length;idx++) printf(" %02x",buffer[idx+23]);
+    int idx; for (idx=0;idx<length;idx++) UDPLOG(" %02x",buffer[idx+23]);
     wc_ecc_init(&pubecckey);
     ret=wc_ecc_import_x963_ex(buffer+23,length,&pubecckey,ECC_SECP384R1);
-    printf("\nret: %d\n",ret);
+    UDPLOG("\nret: %d\n",ret);
 
     if (!ret)return PKEYSIZE; else return ret;
 }
 
 int ota_verify_pubkey(void) { //check if public and private key are a pair
-    printf("--- ota_verify_pubkey\n");
+    UDPLOG("--- ota_verify_pubkey\n");
     
     byte hash[HASHSIZE];
     WC_RNG rng;
     wc_RNG_GenerateBlock(&rng, hash, HASHSIZE);
-    //int i; printf("hash: "); for (i=0;i<HASHSIZE;i++) printf("%02x ",hash[i]); printf("\n");
+    //int i; UDPLOG("hash: "); for (i=0;i<HASHSIZE;i++) UDPLOG("%02x ",hash[i]); UDPLOG("\n");
     
     int answer;
     unsigned int siglen=SIGNSIZE;
@@ -159,54 +159,54 @@ int ota_verify_pubkey(void) { //check if public and private key are a pair
     wc_ecc_sign_hash(hash, HASHSIZE, signature, &siglen, &rng, &prvecckey);
     wc_ecc_verify_hash(signature, siglen, hash, HASHSIZE, &answer, &pubecckey);
     
-    printf("key valid: %d\n",answer);
+    UDPLOG("key valid: %d\n",answer);
         
     return answer-1;
 }
 
 void ota_hash(int start_sector, int filesize, byte * hash, byte first_byte) {
-    printf("--- ota_hash\n");
+    UDPLOG("--- ota_hash\n");
     
     int bytes;
     byte buffer[1024];
     Sha384 sha;
     
     wc_InitSha384(&sha);
-    //printf("bytes: ");
+    //UDPLOG("bytes: ");
     for (bytes=0;bytes<filesize-1024;bytes+=1024) {
-        //printf("%d ",bytes);
+        //UDPLOG("%d ",bytes);
         if (!spiflash_read(start_sector+bytes, (byte *)buffer, 1024)) {
-            printf("error reading flash\n");   break;
+            UDPLOG("error reading flash\n");   break;
         }
         if (!bytes && first_byte!=0xff) buffer[0]=first_byte;
         wc_Sha384Update(&sha, buffer, 1024);
     }
-    //printf("%d\n",bytes);
+    //UDPLOG("%d\n",bytes);
     if (!spiflash_read(start_sector+bytes, (byte *)buffer, filesize-bytes)) {
-        printf("error reading flash\n");
+        UDPLOG("error reading flash\n");
     }
     if (!bytes && first_byte!=0xff) buffer[0]=first_byte;
-    //printf("filesize %d\n",filesize);
+    //UDPLOG("filesize %d\n",filesize);
     wc_Sha384Update(&sha, buffer, filesize-bytes);
     wc_Sha384Final(&sha, hash);
 }
 
 void ota_sign(int start_sector, int filesize, signature_t* signature, char* file) {
-    printf("--- ota_sign\n");
+    UDPLOG("--- ota_sign\n");
     
     unsigned int i,siglen=SIGNSIZE;
     WC_RNG rng;
 
     ota_hash(start_sector, filesize, signature->hash, 0xff); // 0xff=no special first byte action
     wc_ecc_sign_hash(signature->hash, HASHSIZE, signature->sign, &siglen, &rng, &prvecckey);
-    printf("echo "); for (i=0;i<HASHSIZE;i++) printf("%02x ",signature->hash[i]); printf("> x.hex\n");
-    printf("echo %08x >>x.hex\n",filesize);
-    printf("echo "); for (i=0;i<siglen  ;i++) printf("%02x ",signature->sign[i]); printf(">>x.hex\n");
-    printf("xxd -r -p x.hex > %s.sig\n",file);  printf("rm x.hex\n");
+    UDPLOG("echo "); for (i=0;i<HASHSIZE;i++) UDPLOG("%02x ",signature->hash[i]); UDPLOG("> x.hex\n");
+    UDPLOG("echo %08x >>x.hex\n",filesize);
+    UDPLOG("echo "); for (i=0;i<siglen  ;i++) UDPLOG("%02x ",signature->sign[i]); UDPLOG(">>x.hex\n");
+    UDPLOG("xxd -r -p x.hex > %s.sig\n",file);  UDPLOG("rm x.hex\n");
 }
 
 int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-release or older,-1)
-    printf("--- ota_compare\n");
+    UDPLOG("--- ota_compare\n");
     char* dot;
     int valuen=0,valueo=0;
     char news[MAXVERSIONLEN],olds[MAXVERSIONLEN];
@@ -221,18 +221,18 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
         strncpy(old,oldv,MAXVERSIONLEN-1);
         if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
         if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
-        printf("%d-%d,%s-%s\n",valuen,valueo,new,old);
+        UDPLOG("%d-%d,%s-%s\n",valuen,valueo,new,old);
         if (valuen>valueo) return 1;
         if (valuen<valueo) return -1;
         valuen=valueo=0;
         if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
         if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
-        printf("%d-%d,%s-%s\n",valuen,valueo,new,old);
+        UDPLOG("%d-%d,%s-%s\n",valuen,valueo,new,old);
         if (valuen>valueo) return 1;
         if (valuen<valueo) return -1;
         valuen=atoi(new);
         valueo=atoi(old);
-        printf("%d-%d\n",valuen,valueo);
+        UDPLOG("%d-%d\n",valuen,valueo);
         if (valuen>valueo) return 1;
         if (valuen<valueo) return -1;        
     } //they are equal
@@ -240,7 +240,7 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
 }
 
 static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
-    printf("--- ota_connect\n");
+    UDPLOG("--- ota_connect\n");
     int ret;
     ip_addr_t target_ip;
     struct sockaddr_in sock_addr;
@@ -258,19 +258,19 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     do {
         ret = netconn_gethostbyname(host, &target_ip);
     } while(ret);
-    printf("target IP is %d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
+    UDPLOG("target IP is %d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
                                                 (unsigned char)((target_ip.addr & 0x0000ff00) >> 8),
                                                 (unsigned char)((target_ip.addr & 0x00ff0000) >> 16),
                                                 (unsigned char)((target_ip.addr & 0xff000000) >> 24));
-    //printf("create socket ......");
+    //UDPLOG("create socket ......");
     *socket = socket(AF_INET, SOCK_STREAM, 0);
     if (*socket < 0) {
-        printf(FAILED);
+        UDPLOG(FAILED);
         return -3;
     }
-    //printf(OK);
+    //UDPLOG(OK);
 
-    printf("bind socket %d....",local_port);
+    UDPLOG("bind socket %d....",local_port);
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = 0;
@@ -278,53 +278,53 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     if (local_port==65536) local_port=LOCAL_PORT_START;
     ret = bind(*socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
     if (ret) {
-        printf(FAILED);
+        UDPLOG(FAILED);
         return -2;
     }
-    printf("OK. ");
+    UDPLOG("OK. ");
 
-    printf("socket connect to remote....");
+    UDPLOG("socket connect to remote....");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = target_ip.addr;
     sock_addr.sin_port = htons(port);
     ret = connect(*socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
     if (ret) {
-        printf(FAILED);
+        UDPLOG(FAILED);
         return -2;
     }
-    printf("OK. ");
+    UDPLOG("OK. ");
 
-    printf("create SSL....");
+    UDPLOG("create SSL....");
     *ssl = wolfSSL_new(ctx);
     if (!*ssl) {
-        printf(FAILED);
+        UDPLOG(FAILED);
         return -2;
     }
-    printf("OK. ");
+    UDPLOG("OK. ");
 
 //wolfSSL_Debugging_ON();
     wolfSSL_set_fd(*ssl, *socket);
-    printf("set_fd done. ");
+    UDPLOG("set_fd done. ");
 
     if (verify) ret=wolfSSL_check_domain_name(*ssl, host);
 //wolfSSL_Debugging_OFF();
 
-    printf("SSL to %s port %d....", host, port);
+    UDPLOG("SSL to %s port %d....", host, port);
     ret = wolfSSL_connect(*ssl);
     if (ret != SSL_SUCCESS) {
-        printf("failed, return [-0x%x]\n", -ret);
+        UDPLOG("failed, return [-0x%x]\n", -ret);
         ret=wolfSSL_get_error(*ssl,ret);
-        printf("wolfSSL_send error = %d\n", ret);
+        UDPLOG("wolfSSL_send error = %d\n", ret);
         return -1;
     }
-    printf(OK);
+    UDPLOG(OK);
     return 0;
 
 }
 
 int   ota_load_user_app(char * *repo, char * *version, char * *file) {
-    printf("--- ota_load_user_app\n");
+    UDPLOG("--- ota_load_user_app\n");
     sysparam_status_t status;
     char *value;
 
@@ -341,47 +341,47 @@ int   ota_load_user_app(char * *repo, char * *version, char * *file) {
         *file=value;
     } else return -1;
 
-    printf("ota_repo=\'%s\' ota_version=\'%s\' ota_file=\'%s\'\n",*repo,*version,*file);
+    UDPLOG("ota_repo=\'%s\' ota_version=\'%s\' ota_file=\'%s\'\n",*repo,*version,*file);
     return 0;
 }
 
 void  ota_set_verify(int onoff) {
-    printf("--- ota_set_verify...");
+    UDPLOG("--- ota_set_verify...");
     int ret=0;
     byte abyte[1];
     
     if (onoff) {
-        printf("ON\n");
+        UDPLOG("ON\n");
         if (verify==0) {
             verify= 1;
             do {
                 if (!spiflash_read(active_cert_sector+PKEYSIZE+(ret++), (byte *)abyte, 1)) {
-                    printf("error reading flash\n");
+                    UDPLOG("error reading flash\n");
                     break;
                 }
             } while (abyte[0]!=0xff); ret--;
-            printf("certs size: %d\n",ret);
+            UDPLOG("certs size: %d\n",ret);
             byte *certs=malloc(ret);
             spiflash_read(active_cert_sector+PKEYSIZE, (byte *)certs, ret);
 
             ret=wolfSSL_CTX_load_verify_buffer(ctx, certs, ret, SSL_FILETYPE_PEM);
             if ( ret != SSL_SUCCESS) {
-                printf("fail cert loading, return %d\n", ret);
+                UDPLOG("fail cert loading, return %d\n", ret);
             }
             free(certs);
             
             time_t ts;
             do {
                 ts = time(NULL);
-                if (ts == ((time_t)-1)) printf("ts=-1, ");
+                if (ts == ((time_t)-1)) UDPLOG("ts=-1, ");
                 vTaskDelay(1);
             } while (!(ts>1073741823)); //2^30-1 which is supposed to be like 2004
-            printf("TIME: %s", ctime(&ts)); //we need to have the clock right to check certificates
+            UDPLOG("TIME: %s", ctime(&ts)); //we need to have the clock right to check certificates
             
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
         }
     } else {
-        printf("OFF\n");
+        UDPLOG("OFF\n");
         if (verify==1) {
             verify= 0;
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
@@ -390,7 +390,7 @@ void  ota_set_verify(int onoff) {
 }
 
 char* ota_get_version(char * repo) {
-    printf("--- ota_get_version\n");
+    UDPLOG("--- ota_get_version\n");
 
     char* version=NULL;
     int retc, ret=0;
@@ -405,38 +405,38 @@ char* ota_get_version(char * repo) {
     strcat(strcat(strcat(strcat(strcat(strcpy(recv_buf, \
         REQUESTHEAD),repo),"/releases/latest"),REQUESTTAIL),HOST),CRLFCRLF);
     send_bytes=strlen(recv_buf);
-    //printf("%s\n",recv_buf);
+    //UDPLOG("%s\n",recv_buf);
 
     retc = ota_connect(HOST, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
     
     if (!retc) {
-        printf("send request......");
+        UDPLOG("send request......");
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         if (ret > 0) {
-            printf("OK\n\n");
+            UDPLOG("OK\n\n");
 
             wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
             if (ret > 0) {
                 recv_buf[ret]=0; //error checking
-                //printf("%s\n",recv_buf);
+                //UDPLOG("%s\n",recv_buf);
 
                 location=strstr(recv_buf,"Location: ");
                 strchr(location,'\r')[0]=0;
-                //printf("%s\n",location);
+                //UDPLOG("%s\n",location);
                 location=strstr(location,"tag/");
                 version=malloc(strlen(location+4));
                 strcpy(version,location+4);
-                printf("%s@version:\"%s\"\n",repo,version);
+                UDPLOG("%s@version:\"%s\"\n",repo,version);
             } else {
-                printf("failed, return [-0x%x]\n", -ret);
+                UDPLOG("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
-                printf("wolfSSL_send error = %d\n", ret);
+                UDPLOG("wolfSSL_send error = %d\n", ret);
             }
         } else {
-            printf("failed, return [-0x%x]\n", -ret);
+            UDPLOG("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
-            printf("wolfSSL_send error = %d\n", ret);
+            UDPLOG("wolfSSL_send error = %d\n", ret);
         }
     }
     switch (retc) {
@@ -458,7 +458,7 @@ char* ota_get_version(char * repo) {
 }
 
 int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte * buffer, int bufsz) { //number of bytes
-    printf("--- ota_get_file_ex\n");
+    UDPLOG("--- ota_get_file_ex\n");
     
     int retc, ret=0, slash;
     WOLFSSL*     ssl;
@@ -480,26 +480,26 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     strcat(strcat(strcat(strcat(strcat(strcat(strcat(strcat(strcpy(recv_buf, \
         REQUESTHEAD),repo),"/releases/download/"),version),"/"),file),REQUESTTAIL),HOST),CRLFCRLF);
     send_bytes=strlen(recv_buf);
-    printf("%s\n",recv_buf);
+    UDPLOG("%s\n",recv_buf);
 
     retc = ota_connect(HOST, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
     
     if (!retc) {
-        printf("send request......");
+        UDPLOG("send request......");
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         if (ret > 0) {
-            printf("OK\n\n");
+            UDPLOG("OK\n\n");
 
             wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
             if (ret > 0) {
                 recv_buf[ret]=0; //error checking, e.g. not result=206
-                printf("%s\n",recv_buf);
+                UDPLOG("%s\n",recv_buf);
                 location=strstr(recv_buf,"HTTP/1.1 ");
                 strchr(location,' ')[0]=0;
                 location+=9; //flush "HTTP/1.1 "
                 slash=atoi(location);
-                printf("HTTP returns %d\n",slash);
+                UDPLOG("HTTP returns %d\n",slash);
                 if (slash!=302) {
                     wolfSSL_free(ssl);
                     lwip_close(socket);
@@ -509,16 +509,16 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 location=strstr(recv_buf,"Location: ");
                 strchr(location,'\r')[0]=0;
                 location+=18; //flush Location: https://
-                //printf("%s\n",location);
+                //UDPLOG("%s\n",location);
             } else {
-                printf("failed, return [-0x%x]\n", -ret);
+                UDPLOG("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
-                printf("wolfSSL_send error = %d\n", ret);
+                UDPLOG("wolfSSL_send error = %d\n", ret);
             }
         } else {
-            printf("failed, return [-0x%x]\n", -ret);
+            UDPLOG("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
-            printf("wolfSSL_send error = %d\n", ret);
+            UDPLOG("wolfSSL_send error = %d\n", ret);
         }
     }
     switch (retc) {
@@ -541,7 +541,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     location[slash]=0; //cut behind the hostname
     char * host2=malloc(strlen(location));
     strcpy(host2,location);
-    //printf("next host: %s\n",host2);
+    //UDPLOG("next host: %s\n",host2);
 
     retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
 
@@ -550,17 +550,17 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     memcpy(location,REQUESTHEAD,5);
     char * getlinestart=malloc(strlen(location));
     strcpy(getlinestart,location);
-    //printf("request:\n%s\n",getlinestart);
+    //UDPLOG("request:\n%s\n",getlinestart);
     //if (!retc) {
     while (collected<length) {
         sprintf(recv_buf,"%s%d-%d%s",getlinestart,collected,collected+4095,CRLFCRLF);
         send_bytes=strlen(recv_buf);
-        //printf("request:\n%s\n",recv_buf);
-        printf("send request......");
+        //UDPLOG("request:\n%s\n",recv_buf);
+        UDPLOG("send request......");
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         recv_bytes=0;
         if (ret > 0) {
-            printf("OK\n\n");
+            UDPLOG("OK\n\n");
 
             header=1;
             memset(recv_buf,0,RECV_BUF_LEN);
@@ -569,7 +569,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 ret = wolfSSL_read(ssl, recv_buf, RECV_BUF_LEN - 1);
                 if (ret > 0) {
                     if (header) {
-                        //printf("%s\n-------- %d\n", recv_buf, ret);
+                        //UDPLOG("%s\n-------- %d\n", recv_buf, ret);
                         //parse Content-Length: xxxx
                         location=strstr(recv_buf,"Content-Length: ");
                         strchr(location,'\r')[0]=0;
@@ -587,7 +587,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         recv_bytes += ret;
                         if (sector) { //write to flash
                             if (writespace<ret) {
-                                printf("erasing@0x%05x\n", sector+collected);
+                                UDPLOG("erasing@0x%05x\n", sector+collected);
                                 if (!spiflash_erase_sector(sector+collected)) return -6; //erase error
                                 writespace+=SECTORSIZE;
                             }
@@ -604,23 +604,23 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         }
                         collected+=ret;
                         int i;
-                        for (i=0;i<4;i++) printf("%02x ", recv_buf[i]);
-                        printf("... ");
-                        for (i=4;i>0;i--) printf("%02x ", recv_buf[ret-i]);
-                        printf("   ");
+                        for (i=0;i<4;i++) UDPLOG("%02x ", recv_buf[i]);
+                        UDPLOG("... ");
+                        for (i=4;i>0;i--) UDPLOG("%02x ", recv_buf[ret-i]);
+                        UDPLOG("   ");
                     }
                 } else {
-                    if (ret) {ret=wolfSSL_get_error(ssl,ret); printf("error %d\n",ret);}
+                    if (ret) {ret=wolfSSL_get_error(ssl,ret); UDPLOG("error %d\n",ret);}
                     if (!ret && collected<length) retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl); //memory leak?
                     break;
                 }
                 header=0; //move to header section itself
             } while(recv_bytes<clength);
-            printf("\nso far collected %d bytes\n", collected);
+            UDPLOG("\nso far collected %d bytes\n", collected);
         } else {
-            printf("failed, return [-0x%x]\n", -ret);
+            UDPLOG("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
-            printf("wolfSSL_send error = %d\n", ret);
+            UDPLOG("wolfSSL_send error = %d\n", ret);
             if (ret==-308) {
                 retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl); //dangerous for eternal connecting? memory leak?
             } else {
@@ -644,17 +644,17 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
 }
 
 void  ota_finalize_file(int sector) {
-    printf("--- ota_finalize_file\n");
+    UDPLOG("--- ota_finalize_file\n");
 
-    if (!spiflash_write(sector, file_first_byte, 1)) printf("error writing flash\n");
+    if (!spiflash_write(sector, file_first_byte, 1)) UDPLOG("error writing flash\n");
 }
 
 int   ota_get_file(char * repo, char * version, char * file, int sector) { //number of bytes
-    printf("--- ota_get_file\n");
+    UDPLOG("--- ota_get_file\n");
     return ota_get_file_ex(repo,version,file,sector,NULL,0);
 }
 int   ota_get_newkey(char * repo, char * version, char * file, signature_t* signature) { //success
-    printf("--- ota_get_newkey\n");
+    UDPLOG("--- ota_get_newkey\n");
     
     byte pkeybuffer[PKEYSIZE];
     int length;
@@ -673,7 +673,7 @@ int   ota_get_newkey(char * repo, char * version, char * file, signature_t* sign
     } else return -1;
 }
 int   ota_get_hash(char * repo, char * version, char * file, signature_t* signature) {
-    printf("--- ota_get_hash\n");
+    UDPLOG("--- ota_get_hash\n");
     int ret;
     byte buffer[HASHSIZE+4+SIGNSIZE];
     char * signame=malloc(strlen(file));
@@ -692,13 +692,13 @@ int   ota_get_hash(char * repo, char * version, char * file, signature_t* signat
 }
 
 int   ota_verify_hash(int address, signature_t* signature) {
-    printf("--- ota_verify_hash\n");
+    UDPLOG("--- ota_verify_hash\n");
     
     byte hash[HASHSIZE];
     ota_hash(address, signature->size, hash, file_first_byte[0]);
 //     int i;
-//     printf("signhash:"); for (i=0;i<HASHSIZE;i++) printf(" %02x",signature->hash[i]); printf("\n");
-//     printf("calchash:"); for (i=0;i<HASHSIZE;i++) printf(" %02x",           hash[i]); printf("\n");
+//     UDPLOG("signhash:"); for (i=0;i<HASHSIZE;i++) UDPLOG(" %02x",signature->hash[i]); UDPLOG("\n");
+//     UDPLOG("calchash:"); for (i=0;i<HASHSIZE;i++) UDPLOG(" %02x",           hash[i]); UDPLOG("\n");
     
     if (memcmp(hash,signature->hash,HASHSIZE)) ota_hash(address, signature->size, hash, 0xff);
     
@@ -706,25 +706,25 @@ int   ota_verify_hash(int address, signature_t* signature) {
 }
 
 int   ota_verify_signature(signature_t* signature) {
-    printf("--- ota_verify_signature\n");
+    UDPLOG("--- ota_verify_signature\n");
     
     int answer=0;
 
     wc_ecc_verify_hash(signature->sign, SIGNSIZE, signature->hash, HASHSIZE, &answer, &pubecckey);
-    printf("signature valid: %d\n",answer);
+    UDPLOG("signature valid: %d\n",answer);
         
     return answer-1;
 }
 
 void  ota_kill_file(int sector) {
-    printf("--- ota_kill_file\n");
+    UDPLOG("--- ota_kill_file\n");
 
     byte zero[]={0x00};
-    if (!spiflash_write(sector, zero, 1)) printf("error writing flash\n");
+    if (!spiflash_write(sector, zero, 1)) UDPLOG("error writing flash\n");
 }
 
 void  ota_swap_cert_sector() {
-    printf("--- ota_swap_cert_sector\n");
+    UDPLOG("--- ota_swap_cert_sector\n");
     
     ota_kill_file(active_cert_sector);
     ota_finalize_file(backup_cert_sector);
@@ -738,28 +738,28 @@ void  ota_swap_cert_sector() {
 }
 
 void  ota_write_status(char * version) {
-    printf("--- ota_write_status\n");
+    UDPLOG("--- ota_write_status\n");
     
     sysparam_set_string("ota_version", version);
 }
 
 int   ota_boot(void) {
-    printf("--- ota_boot...");
+    UDPLOG("--- ota_boot...");
     byte bootrom;
     rboot_get_last_boot_rom(&bootrom);
-    printf("%d\n",bootrom);
+    UDPLOG("%d\n",bootrom);
     return 1-bootrom;
 }
 
 void  ota_temp_boot(void) {
-    printf("--- ota_temp_boot\n");
+    UDPLOG("--- ota_temp_boot\n");
     
     rboot_set_temp_rom(1);
     sdk_system_restart();
 }
 
 void  ota_reboot(void) {
-    printf("--- ota_reboot\n");
+    UDPLOG("--- ota_reboot\n");
 
     sdk_system_restart();
 }

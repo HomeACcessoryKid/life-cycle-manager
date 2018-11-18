@@ -3,7 +3,7 @@
  * use local.mk to turn it into the LCM otamain.bin app or the otaboot.bin app
  */
 
-#include <stdlib.h>  //for printf and free
+#include <stdlib.h>  //for UDPLOG and free
 #include <stdio.h>
 #include <esp/uart.h>
 #include <esp8266.h>
@@ -44,23 +44,23 @@ void ota_task(void *arg) {
         ota_get_file(OTAREPO,ota_version,CERTFILE,active_cert_sector);
         ota_finalize_file(active_cert_sector);
     }
-    printf("active_cert_sector: 0x%05x\n",active_cert_sector);
+    UDPLOG("active_cert_sector: 0x%05x\n",active_cert_sector);
     file_size=ota_get_pubkey(active_cert_sector);
     
     if (!ota_get_privkey()) { //have private key
         have_private_key=1;
-        printf("have private key\n");
+        UDPLOG("have private key\n");
         if (ota_verify_pubkey()) ota_sign(active_cert_sector,file_size, &signature, "pub-1.key");//use this (old) privkey to sign the (new) pubkey
     }
 
     if (ota_boot()) ota_write_status("0.0.0");  //we will have to get user code from scratch if running ota_boot
     if ( !ota_load_user_app(&user_repo, &user_version, &user_file)) { //repo/version/file must be configured
-        printf("user_repo=\'%s\' user_version=\'%s\' user_file=\'%s\'\n",user_repo,user_version,user_file);
+        UDPLOG("user_repo=\'%s\' user_version=\'%s\' user_file=\'%s\'\n",user_repo,user_version,user_file);
         //new_version=ota_get_version(user_repo); //consider that if here version is equal, we end it already
         //if (!ota_compare(new_version,user_version)) { //allows a denial of update so not doing it for now
         for (;;) { //escape from this loop by continue (try again) or break (boots into slot 0)
-            printf("--- entering the loop\n");
-            //printf("%d\n",sdk_system_get_time()/1000);
+            UDPLOG("--- entering the loop\n");
+            //UDPLOG("%d\n",sdk_system_get_time()/1000);
             //need for a protection against an electricity outage recovery storm
             vTaskDelay(holdoff_time*(1000/portTICK_PERIOD_MS));
             holdoff_time*=HOLDOFF_MULTIPLIER; holdoff_time=(holdoff_time<HOLDOFF_MAX) ? holdoff_time : HOLDOFF_MAX;
@@ -144,7 +144,7 @@ void ota_task(void *arg) {
                 if (ota_verify_signature(&signature)) vTaskDelete(NULL); //this should never happen
                 ota_temp_boot(); //launches the ota software in bootsector 1
             } else {  //running ota-main software now
-                printf("--- running ota-main software\n");
+                UDPLOG("--- running ota-main software\n");
                 //if there is a newer version of ota-main...
                 if (ota_compare(ota_version,OTAVERSION)>0) { //set OTAVERSION when running make and match with github
                     ota_get_hash(OTAREPO, ota_version, BOOTFILE, &signature);
@@ -158,7 +158,7 @@ void ota_task(void *arg) {
                 if (new_version) free(new_version);
                 new_version=ota_get_version(user_repo);
                 if (ota_compare(new_version,user_version)>0) { //can only upgrade
-                    printf("user_repo=\'%s\' new_version=\'%s\' user_file=\'%s\'\n",user_repo,new_version,user_file);
+                    UDPLOG("user_repo=\'%s\' new_version=\'%s\' user_file=\'%s\'\n",user_repo,new_version,user_file);
                     ota_get_hash(user_repo, new_version, user_file, &signature);
                     file_size=ota_get_file(user_repo,new_version,user_file,BOOT0SECTOR);
                     if (file_size<=0 || ota_verify_hash(BOOT0SECTOR,&signature)) continue; //something went wrong, but now boot0 is broken so start over
@@ -176,7 +176,7 @@ void ota_task(void *arg) {
 void on_wifi_ready() {
     xTaskCreate(udplog_send, "logsend", 256, NULL, 4, NULL);
     xTaskCreate(ota_task,"ota",4096,NULL,1,NULL);
-    printf("wifiready-done\n");
+    UDPLOG("wifiready-done\n");
 }
 
 void user_init(void) {
@@ -184,5 +184,5 @@ void user_init(void) {
     uart_set_baud(0, 115200);
 
     wifi_config_init("LCM", NULL, on_wifi_ready); //expanded it with setting repo-details
-    printf("user-init-done\n");
+    UDPLOG("user-init-done\n");
 }
