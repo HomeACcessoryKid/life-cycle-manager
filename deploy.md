@@ -18,7 +18,7 @@ cp firmware/otaboot.bin versions/0.1.0v
 #commit this as version 0.1.0
 #set up a new github release 0.1.0 as a pre-release using the just commited master...
 
-#erase the flash and uplaod the privatekey
+#erase the flash and upload the privatekey
 ```
 esptool.py -p /dev/cu.usbserial-* --baud 230400 erase_flash 
 esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 privatekey.der
@@ -28,8 +28,8 @@ make flash
 #power cycle to prevent the bug for software reset after flash
 #create the 3 signature files next to the bin file and upload to github one by one
 #verify the hashes on the computer
-openssl sha384 versions/otamain.bin
-xxd versions/otamain.bin.sig
+openssl sha384 versions/0.1.0v/otamain.bin
+xxd versions/0.1.0v/otamain.bin.sig
 #make the release a production release on github
 #remove the private key
 ```
