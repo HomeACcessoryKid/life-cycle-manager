@@ -92,7 +92,7 @@ void  ota_init() {
 }
 
 int ota_get_privkey() {
-    UDPLOG("--- ota_get_privkey\n");
+    printf("--- ota_get_privkey\n");
     
     byte buffer[PKEYSIZE]; //maybe 49 bytes would be enough
     int ret;
@@ -101,7 +101,7 @@ int ota_get_privkey() {
     
     //load private key as produced by openssl
     if (!spiflash_read(backup_cert_sector, (byte *)buffer, 24)) {
-        UDPLOG("error reading flash\n");    return -1;
+        printf("error reading flash\n");    return -1;
     }
     if (buffer[0]!=0x30 || buffer[1]!=0x81) return -2; //not a valid keyformat
     if (buffer[3]!=0x02 || buffer[4]!=0x01 || buffer[5]!=0x01) return -2; //not a valid keyformat
@@ -112,10 +112,10 @@ int ota_get_privkey() {
     if (!spiflash_read(backup_cert_sector+idx, (byte *)buffer, length)) {
         UDPLOG("error reading flash\n");    return -1;
     }
-    for (idx=0;idx<length;idx++) UDPLOG(" %02x",buffer[idx]);
+    for (idx=0;idx<length;idx++) printf(" %02x",buffer[idx]);
     wc_ecc_init(&prvecckey);
     ret=wc_ecc_import_private_key_ex(buffer, length, NULL, 0, &prvecckey,ECC_SECP384R1);
-    UDPLOG("\nret: %d\n",ret);
+    printf("\nret: %d\n",ret);
     
     /*
     */
@@ -192,17 +192,17 @@ void ota_hash(int start_sector, int filesize, byte * hash, byte first_byte) {
 }
 
 void ota_sign(int start_sector, int filesize, signature_t* signature, char* file) {
-    UDPLOG("--- ota_sign\n");
+    printf("--- ota_sign\n");
     
     unsigned int i,siglen=SIGNSIZE;
     WC_RNG rng;
 
     ota_hash(start_sector, filesize, signature->hash, 0xff); // 0xff=no special first byte action
     wc_ecc_sign_hash(signature->hash, HASHSIZE, signature->sign, &siglen, &rng, &prvecckey);
-    UDPLOG("echo "); for (i=0;i<HASHSIZE;i++) UDPLOG("%02x ",signature->hash[i]); UDPLOG("> x.hex\n");
-    UDPLOG("echo %08x >>x.hex\n",filesize);
-    UDPLOG("echo "); for (i=0;i<siglen  ;i++) UDPLOG("%02x ",signature->sign[i]); UDPLOG(">>x.hex\n");
-    UDPLOG("xxd -r -p x.hex > %s.sig\n",file);  UDPLOG("rm x.hex\n");
+    printf("echo "); for (i=0;i<HASHSIZE;i++) printf("%02x ",signature->hash[i]); printf("> x.hex\n");
+    printf("echo %08x >>x.hex\n",filesize);
+    printf("echo "); for (i=0;i<siglen  ;i++) printf("%02x ",signature->sign[i]); printf(">>x.hex\n");
+    printf("xxd -r -p x.hex > %s.sig\n",file);  printf("rm x.hex\n");
 }
 
 int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-release or older,-1)
