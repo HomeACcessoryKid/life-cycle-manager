@@ -39,8 +39,10 @@ void udplog_send(void *pvParameters){
 
     while (1) {
         if ((!i && udplogstring_len) || udplogstring_len>1000) {
+            taskENTER_CRITICAL();
             lwip_sendto(lSocket, udplogstring, udplogstring_len, 0, (struct sockaddr *)&sDestAddr, sizeof(sDestAddr));
             udplogstring_len=0;
+            taskEXIT_CRITICAL();
             i=10;
         }
         if (!i) i=10; //sends output every 100ms if not more than 1000 bytes
