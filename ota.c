@@ -454,8 +454,8 @@ char* ota_get_version(char * repo) {
 //     if (retc) return retc;
 //     if (ret <= 0) return ret;
 
+    if (ota_boot() && ota_compare(version,OTAVERSION)<0) strcpy(version,OTAVERSION);
     printf("--- end_get_version\n");
-    if (ota_boot() && ota_compare(version,OTAVERSION)<0) return OTAVERSION;
     return version;
 }
 

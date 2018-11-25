@@ -105,11 +105,8 @@ void ota_task(void *arg) {
                 ota_get_pubkey(active_cert_sector);
             } //certificates are good now
             ota_set_verify(1); //reject faked server
-            printf("A\n");
-            if (ota_version) {printf("B\n");free(ota_version);}
-            printf("C\n");
+            if (ota_version) free(ota_version);
             ota_version=ota_get_version(OTAREPO);
-            printf("D\n");
             if (ota_get_hash(OTAREPO, ota_version, CERTFILE, &signature)) { //testdownload, if server is fake will trigger
                 //report by syslog?  //trouble, so abort
                 break; //leads to boot=0
