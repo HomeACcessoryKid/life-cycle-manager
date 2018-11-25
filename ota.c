@@ -351,7 +351,7 @@ void  ota_set_verify(int onoff) {
     byte abyte[1];
     
     if (onoff) {
-        UDPLOG("ON\n");
+        UDPLGP("ON\n");
         if (verify==0) {
             verify= 1;
             do {
@@ -381,7 +381,7 @@ void  ota_set_verify(int onoff) {
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
         }
     } else {
-        UDPLOG("OFF\n");
+        UDPLGP("OFF\n");
         if (verify==1) {
             verify= 0;
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);

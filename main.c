@@ -68,7 +68,7 @@ void ota_task(void *arg) {
             //do we still have a valid internet connexion? dns resolve github... should not be private IP
             
             ota_set_verify(0); //should work even without certificates
-            if (ota_version) free(ota_version);
+            if (ota_version) free(ota_version); ota_version=NULL;
             ota_version=ota_get_version(OTAREPO);
             if (ota_get_hash(OTAREPO, ota_version, CERTFILE, &signature)) { //no certs.sector.sig exists yet on server
                 if (have_private_key) {
@@ -105,7 +105,7 @@ void ota_task(void *arg) {
                 ota_get_pubkey(active_cert_sector);
             } //certificates are good now
             ota_set_verify(1); //reject faked server
-            if (ota_version) free(ota_version);
+            if (ota_version) free(ota_version); ota_version=NULL;
             ota_version=ota_get_version(OTAREPO);
             if (ota_get_hash(OTAREPO, ota_version, CERTFILE, &signature)) { //testdownload, if server is fake will trigger
                 //report by syslog?  //trouble, so abort
@@ -155,7 +155,7 @@ void ota_task(void *arg) {
                     ota_finalize_file(BOOT0SECTOR);
                     break; //leads to boot=0 and starts self-updating/otaboot-app
                 } //ota code is up to date
-                if (new_version) free(new_version);
+                if (new_version) free(new_version); new_version=NULL;
                 new_version=ota_get_version(user_repo);
                 if (ota_compare(new_version,user_version)>0) { //can only upgrade
                     UDPLOG("user_repo=\'%s\' new_version=\'%s\' user_file=\'%s\'\n",user_repo,new_version,user_file);
