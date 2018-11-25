@@ -749,7 +749,7 @@ int   ota_boot(void) {
     UDPLGP("--- ota_boot...");
     byte bootrom;
     rboot_get_last_boot_rom(&bootrom);
-    UDPLOG("%d\n",bootrom);
+    UDPLGP("%d\n",bootrom);
     return 1-bootrom;
 }
 
