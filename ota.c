@@ -35,7 +35,7 @@ void MyLoggingCallback(const int logLevel, const char* const logMessage) {
 #endif
 
 void  ota_init() {
-    UDPLOG("--- ota_init\n");
+    UDPLGP("--- ota_init\n");
     
     //rboot setup
     rboot_config conf;
@@ -123,7 +123,7 @@ int ota_get_privkey() {
 }
 
 int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, report filesize
-    UDPLOG("--- ota_get_pubkey\n");
+    UDPLGP("--- ota_get_pubkey\n");
     
     byte buf[PKEYSIZE];
     byte * buffer=buf;
@@ -145,7 +145,7 @@ int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, 
 }
 
 int ota_verify_pubkey(void) { //check if public and private key are a pair
-    UDPLOG("--- ota_verify_pubkey\n");
+    UDPLGP("--- ota_verify_pubkey\n");
     
     byte hash[HASHSIZE];
     WC_RNG rng;
@@ -165,7 +165,7 @@ int ota_verify_pubkey(void) { //check if public and private key are a pair
 }
 
 void ota_hash(int start_sector, int filesize, byte * hash, byte first_byte) {
-    UDPLOG("--- ota_hash\n");
+    UDPLGP("--- ota_hash\n");
     
     int bytes;
     byte buffer[1024];
@@ -206,7 +206,7 @@ void ota_sign(int start_sector, int filesize, signature_t* signature, char* file
 }
 
 int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-release or older,-1)
-    UDPLOG("--- ota_compare\n");
+    UDPLGP("--- ota_compare\n");
     char* dot;
     int valuen=0,valueo=0;
     char news[MAXVERSIONLEN],olds[MAXVERSIONLEN];
@@ -240,7 +240,7 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
 }
 
 static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
-    UDPLOG("--- ota_connect\n");
+    UDPLGP("--- ota_connect\n");
     int ret;
     ip_addr_t target_ip;
     struct sockaddr_in sock_addr;
@@ -324,7 +324,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
 }
 
 int   ota_load_user_app(char * *repo, char * *version, char * *file) {
-    UDPLOG("--- ota_load_user_app\n");
+    UDPLGP("--- ota_load_user_app\n");
     sysparam_status_t status;
     char *value;
 
@@ -346,7 +346,7 @@ int   ota_load_user_app(char * *repo, char * *version, char * *file) {
 }
 
 void  ota_set_verify(int onoff) {
-    UDPLOG("--- ota_set_verify...");
+    UDPLGP("--- ota_set_verify...");
     int ret=0;
     byte abyte[1];
     
@@ -354,31 +354,26 @@ void  ota_set_verify(int onoff) {
         UDPLOG("ON\n");
         if (verify==0) {
             verify= 1;
-            printf("start-read-cert-size\n");
             do {
                 if (!spiflash_read(active_cert_sector+PKEYSIZE+(ret++), (byte *)abyte, 1)) {
                     UDPLOG("error reading flash\n");
                     break;
                 }
             } while (abyte[0]!=0xff); ret--;
-            printf("certs size: %d\n",ret);
             UDPLOG("certs size: %d\n",ret);
             byte *certs=malloc(ret);
-            printf("start-read-cert\n");
             spiflash_read(active_cert_sector+PKEYSIZE, (byte *)certs, ret);
-            printf("ended-read-cert\n");
 
             ret=wolfSSL_CTX_load_verify_buffer(ctx, certs, ret, SSL_FILETYPE_PEM);
             if ( ret != SSL_SUCCESS) {
                 UDPLOG("fail cert loading, return %d\n", ret);
             }
             free(certs);
-            printf("ended-load-cert\n");
             
             time_t ts;
             do {
                 ts = time(NULL);
-                if (ts == ((time_t)-1)) printf("ts=-1, ");
+                if (ts == ((time_t)-1)) UDPLOG("ts=-1, ");
                 vTaskDelay(1);
             } while (!(ts>1073741823)); //2^30-1 which is supposed to be like 2004
             UDPLOG("TIME: %s", ctime(&ts)); //we need to have the clock right to check certificates
@@ -392,11 +387,11 @@ void  ota_set_verify(int onoff) {
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
         }
     }
-    printf("ended-set-verify\n");
+    printf("--- end_set_verify...\n");
 }
 
 char* ota_get_version(char * repo) {
-    UDPLOG("--- ota_get_version\n");
+    UDPLGP("--- ota_get_version\n");
 
     char* version=NULL;
     int retc, ret=0;
@@ -459,12 +454,13 @@ char* ota_get_version(char * repo) {
 //     if (retc) return retc;
 //     if (ret <= 0) return ret;
 
+    printf("--- end_get_version\n");
     if (ota_boot() && ota_compare(version,OTAVERSION)<0) return OTAVERSION;
     return version;
 }
 
 int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte * buffer, int bufsz) { //number of bytes
-    UDPLOG("--- ota_get_file_ex\n");
+    UDPLGP("--- ota_get_file_ex\n");
     
     int retc, ret=0, slash;
     WOLFSSL*     ssl;
@@ -650,17 +646,17 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
 }
 
 void  ota_finalize_file(int sector) {
-    UDPLOG("--- ota_finalize_file\n");
+    UDPLGP("--- ota_finalize_file\n");
 
     if (!spiflash_write(sector, file_first_byte, 1)) UDPLOG("error writing flash\n");
 }
 
 int   ota_get_file(char * repo, char * version, char * file, int sector) { //number of bytes
-    UDPLOG("--- ota_get_file\n");
+    UDPLGP("--- ota_get_file\n");
     return ota_get_file_ex(repo,version,file,sector,NULL,0);
 }
 int   ota_get_newkey(char * repo, char * version, char * file, signature_t* signature) { //success
-    UDPLOG("--- ota_get_newkey\n");
+    UDPLGP("--- ota_get_newkey\n");
     
     byte pkeybuffer[PKEYSIZE];
     int length;
@@ -679,7 +675,7 @@ int   ota_get_newkey(char * repo, char * version, char * file, signature_t* sign
     } else return -1;
 }
 int   ota_get_hash(char * repo, char * version, char * file, signature_t* signature) {
-    UDPLOG("--- ota_get_hash\n");
+    UDPLGP("--- ota_get_hash\n");
     int ret;
     byte buffer[HASHSIZE+4+SIGNSIZE];
     char * signame=malloc(strlen(file));
@@ -698,7 +694,7 @@ int   ota_get_hash(char * repo, char * version, char * file, signature_t* signat
 }
 
 int   ota_verify_hash(int address, signature_t* signature) {
-    UDPLOG("--- ota_verify_hash\n");
+    UDPLGP("--- ota_verify_hash\n");
     
     byte hash[HASHSIZE];
     ota_hash(address, signature->size, hash, file_first_byte[0]);
@@ -712,7 +708,7 @@ int   ota_verify_hash(int address, signature_t* signature) {
 }
 
 int   ota_verify_signature(signature_t* signature) {
-    UDPLOG("--- ota_verify_signature\n");
+    UDPLGP("--- ota_verify_signature\n");
     
     int answer=0;
 
@@ -723,14 +719,14 @@ int   ota_verify_signature(signature_t* signature) {
 }
 
 void  ota_kill_file(int sector) {
-    UDPLOG("--- ota_kill_file\n");
+    UDPLGP("--- ota_kill_file\n");
 
     byte zero[]={0x00};
     if (!spiflash_write(sector, zero, 1)) UDPLOG("error writing flash\n");
 }
 
 void  ota_swap_cert_sector() {
-    UDPLOG("--- ota_swap_cert_sector\n");
+    UDPLGP("--- ota_swap_cert_sector\n");
     
     ota_kill_file(active_cert_sector);
     ota_finalize_file(backup_cert_sector);
@@ -744,13 +740,13 @@ void  ota_swap_cert_sector() {
 }
 
 void  ota_write_status(char * version) {
-    UDPLOG("--- ota_write_status\n");
+    UDPLGP("--- ota_write_status\n");
     
     sysparam_set_string("ota_version", version);
 }
 
 int   ota_boot(void) {
-    UDPLOG("--- ota_boot...");
+    UDPLGP("--- ota_boot...");
     byte bootrom;
     rboot_get_last_boot_rom(&bootrom);
     UDPLOG("%d\n",bootrom);
@@ -758,14 +754,14 @@ int   ota_boot(void) {
 }
 
 void  ota_temp_boot(void) {
-    UDPLOG("--- ota_temp_boot\n");
+    UDPLGP("--- ota_temp_boot\n");
     
     rboot_set_temp_rom(1);
     sdk_system_restart();
 }
 
 void  ota_reboot(void) {
-    UDPLOG("--- ota_reboot\n");
+    UDPLGP("--- ota_reboot\n");
 
     sdk_system_restart();
 }
