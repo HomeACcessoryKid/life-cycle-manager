@@ -3,7 +3,8 @@ Initial install, WiFi settings and over the air firmware upgrades for any esp-op
 
 this readme is under construction...  
 Meanwhile, the development area is at https://github.com/HomeACcessoryKid/ota  
-Be aware that this area could show instability while testing alpha and beta versions!!
+Be aware that this area could show instability while testing alpha and beta versions!!  
+DO NOT CONSIDER ANY CODE WITH A RELEASE NUMBER BELOW 1.0.0 OF ANY USE
 
 ## Scope
 This is a program that allows any simple repository based on esp-open-rtos on esp8266 to solve its life cycle tasks.

@@ -354,26 +354,31 @@ void  ota_set_verify(int onoff) {
         UDPLOG("ON\n");
         if (verify==0) {
             verify= 1;
+            printf("start-read-cert-size\n");
             do {
                 if (!spiflash_read(active_cert_sector+PKEYSIZE+(ret++), (byte *)abyte, 1)) {
                     UDPLOG("error reading flash\n");
                     break;
                 }
             } while (abyte[0]!=0xff); ret--;
+            printf("certs size: %d\n",ret);
             UDPLOG("certs size: %d\n",ret);
             byte *certs=malloc(ret);
+            printf("start-read-cert\n");
             spiflash_read(active_cert_sector+PKEYSIZE, (byte *)certs, ret);
+            printf("ended-read-cert\n");
 
             ret=wolfSSL_CTX_load_verify_buffer(ctx, certs, ret, SSL_FILETYPE_PEM);
             if ( ret != SSL_SUCCESS) {
                 UDPLOG("fail cert loading, return %d\n", ret);
             }
             free(certs);
+            printf("ended-load-cert\n");
             
             time_t ts;
             do {
                 ts = time(NULL);
-                if (ts == ((time_t)-1)) UDPLOG("ts=-1, ");
+                if (ts == ((time_t)-1)) printf("ts=-1, ");
                 vTaskDelay(1);
             } while (!(ts>1073741823)); //2^30-1 which is supposed to be like 2004
             UDPLOG("TIME: %s", ctime(&ts)); //we need to have the clock right to check certificates
@@ -387,6 +392,7 @@ void  ota_set_verify(int onoff) {
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
         }
     }
+    printf("ended-set-verify\n");
 }
 
 char* ota_get_version(char * repo) {

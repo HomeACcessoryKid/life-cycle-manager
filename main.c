@@ -180,6 +180,7 @@ void on_wifi_ready() {
 }
 
 void user_init(void) {
+    UDPLOG("\n\n\n\n\n\n\nuser-init-start\n");
 //    uart_set_baud(0, 74880);
     uart_set_baud(0, 115200);
 
