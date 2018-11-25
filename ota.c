@@ -411,12 +411,12 @@ char* ota_get_version(char * repo) {
     retc = ota_connect(HOST, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
     
     if (!retc) {
-        UDPLOG("send request......");
+        UDPLGP("%s",recv_buf);
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         if (ret > 0) {
-            UDPLOG("OK\n\n");
+            UDPLGP("sent OK\n");
 
-            wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
+            //wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
             if (ret > 0) {
                 recv_buf[ret]=0; //error checking
@@ -487,12 +487,12 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     retc = ota_connect(HOST, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
     
     if (!retc) {
-        UDPLOG("send request......");
+        UDPLGP("%s",recv_buf);
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         if (ret > 0) {
-            UDPLOG("OK\n\n");
+            UDPLGP("sent OK\n\n");
 
-            wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
+            //wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
             if (ret > 0) {
                 recv_buf[ret]=0; //error checking, e.g. not result=206
@@ -562,7 +562,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         recv_bytes=0;
         if (ret > 0) {
-            UDPLOG("OK\n\n");
+            UDPLOG("OK\n");
 
             header=1;
             memset(recv_buf,0,RECV_BUF_LEN);
@@ -606,10 +606,10 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         }
                         collected+=ret;
                         int i;
-                        for (i=0;i<4;i++) UDPLOG("%02x ", recv_buf[i]);
-                        UDPLOG("... ");
-                        for (i=4;i>0;i--) UDPLOG("%02x ", recv_buf[ret-i]);
-                        UDPLOG("   ");
+                        for (i=0;i<3;i++) UDPLOG("%02x", recv_buf[i]);
+                        UDPLOG("...");
+                        for (i=3;i>0;i--) UDPLOG("%02x", recv_buf[ret-i]);
+                        UDPLOG(" ");
                     }
                 } else {
                     if (ret) {ret=wolfSSL_get_error(ssl,ret); UDPLOG("error %d\n",ret);}
@@ -618,7 +618,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 }
                 header=0; //move to header section itself
             } while(recv_bytes<clength);
-            UDPLOG("\nso far collected %d bytes\n", collected);
+            UDPLOG(" so far collected %d bytes\n", collected);
         } else {
             UDPLOG("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);

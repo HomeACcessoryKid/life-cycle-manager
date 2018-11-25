@@ -13,7 +13,7 @@
 
 #include <udplogger.h>
 
-char udplogstring[1450]={0}; //in the end I do not know to prevent overflow, so I use the max size of 1 UDP packet
+char udplogstring[2900]={0}; //in the end I do not know to prevent overflow, so I use the max size of 1 UDP packet
 int  udplogstring_len=0;
 
 void udplog_send(void *pvParameters){
@@ -38,7 +38,7 @@ void udplog_send(void *pvParameters){
     lwip_bind(lSocket, (struct sockaddr *)&sLocalAddr, sizeof(sLocalAddr));
 
     while (1) {
-        if ((!i && udplogstring_len) || udplogstring_len>1000) {
+        if ((!i && udplogstring_len) || udplogstring_len>700) {
             lwip_sendto(lSocket, udplogstring, udplogstring_len, 0, (struct sockaddr *)&sDestAddr, sizeof(sDestAddr));
             udplogstring_len=0;
             i=10;
