@@ -240,8 +240,9 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
 }
 
 static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
-    UDPLGP("--- ota_connect\n LP=");
+    UDPLGP("--- ota_connect  LocalPort=");
     int ret;
+    int delay=1;
     ip_addr_t target_ip;
     struct sockaddr_in sock_addr;
     static int local_port=0;
@@ -256,10 +257,13 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         } while (local_port<LOCAL_PORT_START);
     }
     UDPLGP("%04x\n",local_port);
-    do {
+    ret = netconn_gethostbyname(host, &target_ip);
+    while(ret) {
+        printf("%d",ret);
+        vTaskDelay(delay);
+        delay=delay<500?delay*2:500; //exponential hold-off till 5 seconds
         ret = netconn_gethostbyname(host, &target_ip);
-        printf("%d ",ret);
-    } while(ret);
+    }
     UDPLGP("target IP is %d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
                                                 (unsigned char)((target_ip.addr & 0x0000ff00) >> 8),
                                                 (unsigned char)((target_ip.addr & 0x00ff0000) >> 16),
@@ -680,7 +684,7 @@ int   ota_get_hash(char * repo, char * version, char * file, signature_t* signat
     UDPLGP("--- ota_get_hash\n");
     int ret;
     byte buffer[HASHSIZE+4+SIGNSIZE];
-    char * signame=malloc(strlen(file));
+    char * signame=malloc(strlen(file)+5);
     strcpy(signame,file);
     strcat(signame,".sig");
     memset(signature->hash,0,HASHSIZE);
