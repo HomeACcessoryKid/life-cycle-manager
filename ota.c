@@ -240,7 +240,7 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
 }
 
 static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
-    UDPLGP("--- ota_connect\n");
+    UDPLGP("--- ota_connect\n LP=");
     int ret;
     ip_addr_t target_ip;
     struct sockaddr_in sock_addr;
@@ -252,25 +252,27 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         do {
             wc_RNG_GenerateBlock(&rng, initial_port, 2);
             local_port=256*initial_port[0]+initial_port[1];
+            printf("%04x,",local_port);
         } while (local_port<LOCAL_PORT_START);
     }
-
+    UDPLGP("%04x\n",local_port);
     do {
         ret = netconn_gethostbyname(host, &target_ip);
+        printf("%d ",ret);
     } while(ret);
-    UDPLOG("target IP is %d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
+    UDPLGP("target IP is %d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
                                                 (unsigned char)((target_ip.addr & 0x0000ff00) >> 8),
                                                 (unsigned char)((target_ip.addr & 0x00ff0000) >> 16),
                                                 (unsigned char)((target_ip.addr & 0xff000000) >> 24));
-    //UDPLOG("create socket ......");
+    //printf("create socket ......");
     *socket = socket(AF_INET, SOCK_STREAM, 0);
     if (*socket < 0) {
-        UDPLOG(FAILED);
+        printf(FAILED);
         return -3;
     }
-    //UDPLOG(OK);
+    //printf(OK);
 
-    UDPLOG("bind socket %d....",local_port);
+    UDPLGP("bind socket %d....",local_port);
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = 0;
@@ -278,47 +280,47 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     if (local_port==65536) local_port=LOCAL_PORT_START;
     ret = bind(*socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
     if (ret) {
-        UDPLOG(FAILED);
+        printf(FAILED);
         return -2;
     }
-    UDPLOG("OK. ");
+    UDPLGP("OK. ");
 
-    UDPLOG("socket connect to remote....");
+    UDPLGP("socket connect to remote....");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = target_ip.addr;
     sock_addr.sin_port = htons(port);
     ret = connect(*socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
     if (ret) {
-        UDPLOG(FAILED);
+        printf(FAILED);
         return -2;
     }
-    UDPLOG("OK. ");
+    UDPLGP("OK. ");
 
-    UDPLOG("create SSL....");
+    UDPLGP("create SSL....");
     *ssl = wolfSSL_new(ctx);
     if (!*ssl) {
-        UDPLOG(FAILED);
+        printf(FAILED);
         return -2;
     }
-    UDPLOG("OK. ");
+    UDPLGP("OK. ");
 
 //wolfSSL_Debugging_ON();
     wolfSSL_set_fd(*ssl, *socket);
-    UDPLOG("set_fd done. ");
+    UDPLGP("set_fd done. ");
 
     if (verify) ret=wolfSSL_check_domain_name(*ssl, host);
 //wolfSSL_Debugging_OFF();
 
-    UDPLOG("SSL to %s port %d....", host, port);
+    UDPLGP("SSL to %s port %d....", host, port);
     ret = wolfSSL_connect(*ssl);
     if (ret != SSL_SUCCESS) {
-        UDPLOG("failed, return [-0x%x]\n", -ret);
+        printf("failed, return [-0x%x]\n", -ret);
         ret=wolfSSL_get_error(*ssl,ret);
-        UDPLOG("wolfSSL_send error = %d\n", ret);
+        printf("wolfSSL_send error = %d\n", ret);
         return -1;
     }
-    UDPLOG(OK);
+    UDPLGP(OK);
     return 0;
 
 }
@@ -490,7 +492,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
         UDPLGP("%s",recv_buf);
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         if (ret > 0) {
-            UDPLGP("sent OK\n\n");
+            UDPLGP("sent OK\n");
 
             //wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);

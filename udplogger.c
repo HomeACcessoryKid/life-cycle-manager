@@ -13,7 +13,7 @@
 
 #include <udplogger.h>
 
-char udplogstring[2900]={0}; //in the end I do not know to prevent overflow, so I use the max size of 1 UDP packet
+char udplogstring[2900]={0}; //in the end I do not know to prevent overflow, so I use the max size of 2 UDP packets ??
 int  udplogstring_len=0;
 
 void udplog_send(void *pvParameters){
@@ -43,7 +43,7 @@ void udplog_send(void *pvParameters){
             udplogstring_len=0;
             i=10;
         }
-        if (!i) i=10; //sends output every 100ms if not more than 1000 bytes
+        if (!i) i=10; //sends output every 100ms if not more than 700 bytes
         i--;
         vTaskDelay(1); //with len>1000 and delay=10ms, we might handle 800kbps throughput
     }
