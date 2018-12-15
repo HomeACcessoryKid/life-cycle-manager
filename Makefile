@@ -62,6 +62,10 @@ ifdef OTAVERSION
 EXTRA_CFLAGS += -DOTAVERSION=\"$(OTAVERSION)\"
 endif
 
+ifdef OTABETA
+EXTRA_CFLAGS += -DOTABETA
+endif
+
 include $(SDK_PATH)/common.mk
 
 monitor:

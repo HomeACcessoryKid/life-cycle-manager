@@ -34,8 +34,20 @@ void MyLoggingCallback(const int logLevel, const char* const logMessage) {
 }
 #endif
 
+bool userbeta=0;
+bool otabeta=0;
+
 void  ota_init() {
     UDPLGP("--- ota_init\n");
+    
+    //using beta = pre-releases?
+    #ifdef OTABETA
+    sysparam_set_bool("ota_self-use_pre-release", 1);
+    #endif
+    sysparam_get_bool("ota_self-use_pre-release", &otabeta);
+    sysparam_get_bool("ota_use_pre-release", &userbeta);
+    
+    UDPLGP("userbeta=\'%d\' otabeta=\'%d\'\n",userbeta,otabeta);
     
     //rboot setup
     rboot_config conf;
@@ -396,10 +408,12 @@ void  ota_set_verify(int onoff) {
     printf("--- end_set_verify...\n");
 }
 
+int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte * buffer, int bufsz); //prototype needed
 char* ota_get_version(char * repo) {
     UDPLGP("--- ota_get_version\n");
 
     char* version=NULL;
+    char prerelease[64]; 
     int retc, ret=0;
     WOLFSSL*     ssl;
     int socket;
@@ -434,7 +448,7 @@ char* ota_get_version(char * repo) {
                 location=strstr(location,"tag/");
                 version=malloc(strlen(location+4));
                 strcpy(version,location+4);
-                UDPLOG("%s@version:\"%s\"\n",repo,version);
+                UDPLGP("%s@version:\"%s\"\n",repo,version);
             } else {
                 UDPLOG("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
@@ -461,6 +475,20 @@ char* ota_get_version(char * repo) {
 //     if (ret <= 0) return ret;
 
     if (ota_boot() && ota_compare(version,OTAVERSION)<0) strcpy(version,OTAVERSION);
+    
+    //find latest-pre-release if joined beta program
+    if ( (userbeta && strcmp(OTAREPO,repo)) || (otabeta && !strcmp(OTAREPO,repo)) ) {
+        prerelease[63]=0;
+        ret=ota_get_file_ex(repo,version,"latest-pre-release",0,(byte *)prerelease,63);
+        if (ret>0) {
+            prerelease[ret]=0;
+            free(version);
+            version=malloc(strlen(prerelease)+1);
+            strcpy(version,prerelease);
+        }
+    }
+    
+    UDPLGP("%s@version:\"%s\"\n",repo,version);
     printf("--- end_get_version\n");
     return version;
 }
