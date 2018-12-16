@@ -1,3 +1,5 @@
+(c) 2018 HomeAccessoryKid
+
 Instructions for end users:
 TBD
 
@@ -7,17 +9,24 @@ cd life-cycle-manager
 ```
 #initial steps to be expanded
 
-#create/update a file versions/latest-pre-release with this version, but no new-line
+#create/update the file versions/latest-pre-release but no new-line
+```
+echo -n 0.1.11 > versions/latest-pre-release
 mkdir versions/0.1.11v
 cp versions/certs.sector versions/0.1.11v
+```
 #set local.mk to the ota-main program
+```
 make -j6 rebuild OTAVERSION=0.1.11
 mv firmware/otamain.bin versions/0.1.11v
+```
 #set local.mk back to ota-boot program
+```
 make -j6 rebuild OTAVERSION=0.1.11
 mv firmware/otaboot.bin versions/0.1.11v
 make -j6 rebuild OTAVERSION=0.1.11 OTABETA=1
 cp firmware/otaboot.bin versions/0.1.11v/otabootbeta.bin
+```
 
 #remove the older versions files
 
@@ -31,12 +40,16 @@ esptool.py -p /dev/cu.usbserial-* --baud 230400 erase_flash
 esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 privatekey.der
 ```
 #upload the ota-boot BETA program to the device that contains the private key
+```
 make flash OTAVERSION=0.1.11 OTABETA=1
+```
 #power cycle to prevent the bug for software reset after flash
 #create the 3 signature files next to the bin file and upload to github one by one
 #verify the hashes on the computer
+```
 openssl sha384 versions/0.1.11v/otamain.bin
 xxd versions/0.1.11v/otamain.bin.sig
+```
 
 #upload the file versions/latest-pre-release to the 'latest release' assets on github
 

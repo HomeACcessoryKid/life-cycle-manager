@@ -1,3 +1,4 @@
+/*  (c) 2018 HomeAccessoryKid */
 #include <stdlib.h>  //for UDPLOG
 #include <stdio.h>
 #include <string.h>
