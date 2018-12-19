@@ -219,37 +219,38 @@ void ota_sign(int start_sector, int filesize, signature_t* signature, char* file
 }
 
 int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-release or older,-1)
-    UDPLGP("--- ota_compare\n");
+    UDPLGP("--- ota_compare ");
     char* dot;
     int valuen=0,valueo=0;
     char news[MAXVERSIONLEN],olds[MAXVERSIONLEN];
     char * new=news;
     char * old=olds;
+    int result=0;
     
     if (strcmp(newv,oldv)) { //https://semver.org/#spec-item-11
-        if (strchr(newv,'-')) return -1; //we cannot handle pre-releases in the 'latest version' concept
-        //they should not occur since they will block finding a valid production version.
-        //mark them properly as pre-release in github so they do now show up in releases/latest
+        if (strchr(newv,'-')) result=-1; //we cannot handle versions with pre-release suffix notation (yet)
+        //pre-release marker in github serves to identify those
         strncpy(new,newv,MAXVERSIONLEN-1);
         strncpy(old,oldv,MAXVERSIONLEN-1);
         if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
         if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
         UDPLOG("%d-%d,%s-%s\n",valuen,valueo,new,old);
-        if (valuen>valueo) return 1;
-        if (valuen<valueo) return -1;
+        if (valuen>valueo) result=1;
+        if (valuen<valueo) result=-1;
         valuen=valueo=0;
         if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
         if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
         UDPLOG("%d-%d,%s-%s\n",valuen,valueo,new,old);
-        if (valuen>valueo) return 1;
-        if (valuen<valueo) return -1;
+        if (valuen>valueo) result=1;
+        if (valuen<valueo) result=-1;
         valuen=atoi(new);
         valueo=atoi(old);
         UDPLOG("%d-%d\n",valuen,valueo);
-        if (valuen>valueo) return 1;
-        if (valuen<valueo) return -1;        
+        if (valuen>valueo) result=1;
+        if (valuen<valueo) result=-1;        
     } //they are equal
-    return 0; //equal strings
+    UDPLGP("%d\n",result);
+    return result; //equal strings
 }
 
 static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
@@ -406,7 +407,6 @@ void  ota_set_verify(int onoff) {
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
         }
     }
-    printf("--- end_set_verify...\n");
 }
 
 int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte * buffer, int bufsz); //prototype needed
@@ -536,7 +536,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 strchr(location,' ')[0]=0;
                 location+=9; //flush "HTTP/1.1 "
                 slash=atoi(location);
-                UDPLOG("HTTP returns %d\n",slash);
+                UDPLGP("HTTP returns %d\n",slash);
                 if (slash!=302) {
                     wolfSSL_free(ssl);
                     lwip_close(socket);
@@ -684,6 +684,7 @@ void  ota_finalize_file(int sector) {
     UDPLGP("--- ota_finalize_file\n");
 
     if (!spiflash_write(sector, file_first_byte, 1)) UDPLOG("error writing flash\n");
+    //TODO: add verification and retry and if wrong return status...
 }
 
 int   ota_get_file(char * repo, char * version, char * file, int sector) { //number of bytes

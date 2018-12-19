@@ -162,9 +162,9 @@ void ota_task(void *arg) {
                     ota_get_hash(user_repo, new_version, user_file, &signature);
                     file_size=ota_get_file(user_repo,new_version,user_file,BOOT0SECTOR);
                     if (file_size<=0 || ota_verify_hash(BOOT0SECTOR,&signature)) continue; //something went wrong, but now boot0 is broken so start over
-                    ota_finalize_file(BOOT0SECTOR);
+                    ota_finalize_file(BOOT0SECTOR); //TODO return status and if wrong, continue
+                    ota_write_status(new_version); //we have been successful, hurray!
                 } //nothing to update
-                ota_write_status(new_version); //we have been successful, hurray!
                 break; //leads to boot=0 and starts updated user app
             }
         }
