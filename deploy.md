@@ -11,27 +11,27 @@ cd life-cycle-manager
 
 #create/update the file versions/latest-pre-release but no new-line
 ```
-echo -n 0.1.12 > versions/latest-pre-release
-mkdir versions/0.1.12v
-cp versions/certs.sector versions/0.1.12v
+echo -n 0.1.13 > versions/latest-pre-release
+mkdir versions/0.1.13v
+cp versions/certs.sector versions/0.1.13v
 ```
 #set local.mk to the ota-main program
 ```
-make -j6 rebuild OTAVERSION=0.1.12
-mv firmware/otamain.bin versions/0.1.12v
+make -j6 rebuild OTAVERSION=0.1.13
+mv firmware/otamain.bin versions/0.1.13v
 ```
 #set local.mk back to ota-boot program
 ```
-make -j6 rebuild OTAVERSION=0.1.12
-mv firmware/otaboot.bin versions/0.1.12v
-make -j6 rebuild OTAVERSION=0.1.12 OTABETA=1
-cp firmware/otaboot.bin versions/0.1.12v/otabootbeta.bin
+make -j6 rebuild OTAVERSION=0.1.13
+mv firmware/otaboot.bin versions/0.1.13v
+make -j6 rebuild OTAVERSION=0.1.13 OTABETA=1
+cp firmware/otaboot.bin versions/0.1.13v/otabootbeta.bin
 ```
 
 #remove the older versions files
 
-#commit this as version 0.1.12
-#set up a new github release 0.1.12 as a pre-release using the just commited master...
+#commit this as version 0.1.13
+#set up a new github release 0.1.13 as a pre-release using the just commited master...
 #upload the certs and binaries to the pre-release assets on github
 
 #erase the flash and upload the privatekey
@@ -41,14 +41,14 @@ esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 privatekey.d
 ```
 #upload the ota-boot BETA program to the device that contains the private key
 ```
-make flash OTAVERSION=0.1.12 OTABETA=1
+make flash OTAVERSION=0.1.13 OTABETA=1
 ```
 #power cycle to prevent the bug for software reset after flash
 #create the 3 signature files next to the bin file and upload to github one by one
 #verify the hashes on the computer
 ```
-openssl sha384 versions/0.1.12v/otamain.bin
-xxd versions/0.1.12v/otamain.bin.sig
+openssl sha384 versions/0.1.13v/otamain.bin
+xxd versions/0.1.13v/otamain.bin.sig
 ```
 
 #upload the file versions/latest-pre-release to the 'latest release' assets on github

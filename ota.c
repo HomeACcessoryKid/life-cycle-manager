@@ -793,11 +793,13 @@ void  ota_temp_boot(void) {
     UDPLGP("--- ota_temp_boot\n");
     
     rboot_set_temp_rom(1);
+    vTaskDelay(20); //allows UDPLOG to flush
     sdk_system_restart();
 }
 
 void  ota_reboot(void) {
     UDPLGP("--- ota_reboot\n");
 
+    vTaskDelay(20); //allows UDPLOG to flush
     sdk_system_restart();
 }
