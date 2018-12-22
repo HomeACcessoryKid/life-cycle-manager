@@ -616,13 +616,12 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         location+=21; //flush Content-Range: bytes //
                         location=strstr(location,"/"); location++; //flush /
                         length=atoi(location);
-                        UDPLGP("start@ 0x%5x collecting %6d bytes\n",sector,length);
                         //verify if last bytes are crlfcrlf else header=1
                     } else {
                         recv_bytes += ret;
                         if (sector) { //write to flash
                             if (writespace<ret) {
-                                printf("erasing@0x%05x>", sector+collected);
+                                UDPLGP("erasing@0x%05x>", sector+collected);
                                 if (!spiflash_erase_sector(sector+collected)) return -6; //erase error
                                 writespace+=SECTORSIZE;
                             }
@@ -652,7 +651,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 header=0; //move to header section itself
             } while(recv_bytes<clength);
             printf(" so far collected %d bytes\n", collected);
-            UDPLOG("\rerased 0x%5x collected  %6d bytes", sector+collected, collected);
+            UDPLOG(" collected %d bytes\r",        collected);
         } else {
             printf("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);

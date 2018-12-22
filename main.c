@@ -46,7 +46,6 @@ void ota_task(void *arg) {
         ota_finalize_file(active_cert_sector);
     }
     UDPLGP("active_cert_sector: 0x%05x\n",active_cert_sector);
-    ota_get_pubkey(active_cert_sector); //TODO test if this works multiple times and remove after test
     file_size=ota_get_pubkey(active_cert_sector);
     
     if (!ota_get_privkey()) { //have private key
