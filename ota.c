@@ -149,10 +149,10 @@ int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, 
     if (buffer[20]!=0x03 || buffer[21]!=0x62 || buffer[22]!=0x00) return -2; //not a valid keyformat
     length=97;
     
-    int idx; for (idx=0;idx<length;idx++) UDPLOG(" %02x",buffer[idx+23]);
+    int idx; for (idx=0;idx<length;idx++) printf(" %02x",buffer[idx+23]);
     wc_ecc_init(&pubecckey);
     ret=wc_ecc_import_x963_ex(buffer+23,length,&pubecckey,ECC_SECP384R1);
-    UDPLOG("\nret: %d\n",ret);
+    printf("\nret: %d\n",ret);
 
     if (!ret)return PKEYSIZE; else return ret;
 }
@@ -361,7 +361,7 @@ int   ota_load_user_app(char * *repo, char * *version, char * *file) {
         *file=value;
     } else return -1;
 
-    UDPLOG("ota_repo=\'%s\' ota_version=\'%s\' ota_file=\'%s\'\n",*repo,*version,*file);
+    UDPLGP("user_repo=\'%s\' user_version=\'%s\' user_file=\'%s\'\n",*repo,*version,*file);
     return 0;
 }
 
@@ -449,16 +449,16 @@ char* ota_get_version(char * repo) {
                 location=strstr(location,"tag/");
                 version=malloc(strlen(location+4));
                 strcpy(version,location+4);
-                UDPLGP("%s@version:\"%s\"\n",repo,version);
+                printf("%s@version:\"%s\"\n",repo,version);
             } else {
-                UDPLOG("failed, return [-0x%x]\n", -ret);
+                UDPLGP("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
-                UDPLOG("wolfSSL_send error = %d\n", ret);
+                UDPLGP("wolfSSL_send error = %d\n", ret);
             }
         } else {
-            UDPLOG("failed, return [-0x%x]\n", -ret);
+            UDPLGP("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
-            UDPLOG("wolfSSL_send error = %d\n", ret);
+            UDPLGP("wolfSSL_send error = %d\n", ret);
         }
     }
     switch (retc) {
@@ -490,7 +490,6 @@ char* ota_get_version(char * repo) {
     }
     
     UDPLGP("%s@version:\"%s\"\n",repo,version);
-    printf("--- end_get_version\n");
     return version;
 }
 
@@ -548,14 +547,14 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 location+=18; //flush Location: https://
                 //UDPLOG("%s\n",location);
             } else {
-                UDPLOG("failed, return [-0x%x]\n", -ret);
+                printf("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
-                UDPLOG("wolfSSL_send error = %d\n", ret);
+                printf("wolfSSL_send error = %d\n", ret);
             }
         } else {
-            UDPLOG("failed, return [-0x%x]\n", -ret);
+            printf("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
-            UDPLOG("wolfSSL_send error = %d\n", ret);
+            printf("wolfSSL_send error = %d\n", ret);
         }
     }
     switch (retc) {
@@ -593,11 +592,11 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
         sprintf(recv_buf,"%s%d-%d%s",getlinestart,collected,collected+4095,CRLFCRLF);
         send_bytes=strlen(recv_buf);
         //UDPLOG("request:\n%s\n",recv_buf);
-        UDPLOG("send request......");
+        printf("send request......");
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         recv_bytes=0;
         if (ret > 0) {
-            UDPLOG("OK\n");
+            printf("OK\n");
 
             header=1;
             memset(recv_buf,0,RECV_BUF_LEN);
@@ -624,7 +623,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         recv_bytes += ret;
                         if (sector) { //write to flash
                             if (writespace<ret) {
-                                UDPLOG("erasing@0x%05x\n", sector+collected);
+                                printf("erasing@0x%05x\n", sector+collected);
                                 if (!spiflash_erase_sector(sector+collected)) return -6; //erase error
                                 writespace+=SECTORSIZE;
                             }
@@ -641,23 +640,24 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         }
                         collected+=ret;
                         int i;
-                        for (i=0;i<3;i++) UDPLOG("%02x", recv_buf[i]);
-                        UDPLOG("...");
-                        for (i=3;i>0;i--) UDPLOG("%02x", recv_buf[ret-i]);
-                        UDPLOG(" ");
+                        for (i=0;i<3;i++) printf("%02x", recv_buf[i]);
+                        printf("...");
+                        for (i=3;i>0;i--) printf("%02x", recv_buf[ret-i]);
+                        printf(" ");
                     }
                 } else {
-                    if (ret) {ret=wolfSSL_get_error(ssl,ret); UDPLOG("error %d\n",ret);}
+                    if (ret) {ret=wolfSSL_get_error(ssl,ret); printf("error %d\n",ret);}
                     if (!ret && collected<length) retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl); //memory leak?
                     break;
                 }
                 header=0; //move to header section itself
             } while(recv_bytes<clength);
-            UDPLOG(" so far collected %d bytes\n", collected);
+            printf(" so far collected %d bytes\n", collected);
+            UDPLOG("%d bytes\r", collected);
         } else {
-            UDPLOG("failed, return [-0x%x]\n", -ret);
+            printf("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
-            UDPLOG("wolfSSL_send error = %d\n", ret);
+            printf("wolfSSL_send error = %d\n", ret);
             if (ret==-308) {
                 retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl); //dangerous for eternal connecting? memory leak?
             } else {
@@ -665,6 +665,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
             }
         }
     }
+    UDPLOG("\n");
     switch (retc) {
         case  0:
         case -1:

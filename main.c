@@ -55,7 +55,6 @@ void ota_task(void *arg) {
 
     if (ota_boot()) ota_write_status("0.0.0");  //we will have to get user code from scratch if running ota_boot
     if ( !ota_load_user_app(&user_repo, &user_version, &user_file)) { //repo/version/file must be configured
-        UDPLOG("user_repo=\'%s\' user_version=\'%s\' user_file=\'%s\'\n",user_repo,user_version,user_file);
         //new_version=ota_get_version(user_repo); //consider that if here version is equal, we end it already
         //if (!ota_compare(new_version,user_version)) { //allows a denial of update so not doing it for now
         for (;;) { //escape from this loop by continue (try again) or break (boots into slot 0)
