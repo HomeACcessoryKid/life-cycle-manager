@@ -234,18 +234,18 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
         strncpy(old,oldv,MAXVERSIONLEN-1);
         if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
         if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
-        UDPLOG("%d-%d,%s-%s\n",valuen,valueo,new,old);
+        printf("%d-%d,%s-%s\n",valuen,valueo,new,old);
         if (valuen>valueo) result=1;
         if (valuen<valueo) result=-1;
         valuen=valueo=0;
         if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
         if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
-        UDPLOG("%d-%d,%s-%s\n",valuen,valueo,new,old);
+        printf("%d-%d,%s-%s\n",valuen,valueo,new,old);
         if (valuen>valueo) result=1;
         if (valuen<valueo) result=-1;
         valuen=atoi(new);
         valueo=atoi(old);
-        UDPLOG("%d-%d\n",valuen,valueo);
+        printf("%d-%d\n",valuen,valueo);
         if (valuen>valueo) result=1;
         if (valuen<valueo) result=-1;        
     } //they are equal
@@ -254,7 +254,7 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
 }
 
 static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
-    UDPLGP("--- ota_connect  LocalPort=");
+    UDPLGP("--- ota_connect LocalPort=");
     int ret;
     int delay=1;
     ip_addr_t target_ip;
@@ -289,7 +289,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         return -3;
     }
 
-    UDPLGP("local...");
+    UDPLGP("local..");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = 0;
@@ -302,7 +302,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     }
     UDPLGP("OK ");
 
-    UDPLGP("remote...");
+    UDPLGP("remote..");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = target_ip.addr;
@@ -314,7 +314,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     }
     UDPLGP("OK ");
 
-    UDPLGP("SSL...");
+    UDPLGP("SSL..");
     *ssl = wolfSSL_new(ctx);
     if (!*ssl) {
         printf(FAILED);
@@ -329,7 +329,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     if (verify) ret=wolfSSL_check_domain_name(*ssl, host);
 //wolfSSL_Debugging_OFF();
 
-    UDPLGP("to %s port %d...", host, port);
+    UDPLGP("to %s port %d..", host, port);
     ret = wolfSSL_connect(*ssl);
     if (ret != SSL_SUCCESS) {
         printf("failed, return [-0x%x]\n", -ret);
@@ -434,7 +434,7 @@ char* ota_get_version(char * repo) {
         UDPLGP("%s",recv_buf);
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         if (ret > 0) {
-            UDPLGP("sent OK\n");
+            printf("sent OK\n");
 
             //wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
@@ -586,7 +586,6 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     strcpy(getlinestart,location);
     //UDPLOG("request:\n%s\n",getlinestart);
     //if (!retc) {
-    UDPLGP("Collecting %d bytes\n",length);
     while (collected<length) {
         sprintf(recv_buf,"%s%d-%d%s",getlinestart,collected,collected+4095,CRLFCRLF);
         send_bytes=strlen(recv_buf);
@@ -617,12 +616,13 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         location+=21; //flush Content-Range: bytes //
                         location=strstr(location,"/"); location++; //flush /
                         length=atoi(location);
+                        UDPLGP("start@ 0x%5x collecting %6d bytes\n",sector,length);
                         //verify if last bytes are crlfcrlf else header=1
                     } else {
                         recv_bytes += ret;
                         if (sector) { //write to flash
                             if (writespace<ret) {
-                                printf("erasing@0x%05x\n", sector+collected);
+                                printf("erasing@0x%05x>", sector+collected);
                                 if (!spiflash_erase_sector(sector+collected)) return -6; //erase error
                                 writespace+=SECTORSIZE;
                             }
@@ -652,7 +652,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 header=0; //move to header section itself
             } while(recv_bytes<clength);
             printf(" so far collected %d bytes\n", collected);
-            UDPLOG("\rerased %x collected %d bytes", sector+collected, collected);
+            UDPLOG("\rerased 0x%5x collected  %6d bytes", sector+collected, collected);
         } else {
             printf("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
