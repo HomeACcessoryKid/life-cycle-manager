@@ -270,7 +270,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
             printf("%04x,",local_port);
         } while (local_port<LOCAL_PORT_START);
     }
-    UDPLGP("%04x\n",local_port);
+    UDPLGP("%04x ",local_port);
     ret = netconn_gethostbyname(host, &target_ip);
     while(ret) {
         printf("%d",ret);
@@ -278,7 +278,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         delay=delay<500?delay*2:500; //exponential hold-off till 5 seconds
         ret = netconn_gethostbyname(host, &target_ip);
     }
-    UDPLGP("target IP is %d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
+    UDPLGP("IP:%d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
                                                 (unsigned char)((target_ip.addr & 0x0000ff00) >> 8),
                                                 (unsigned char)((target_ip.addr & 0x00ff0000) >> 16),
                                                 (unsigned char)((target_ip.addr & 0xff000000) >> 24));
@@ -288,9 +288,8 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         printf(FAILED);
         return -3;
     }
-    //printf(OK);
 
-    UDPLGP("bind socket %d....",local_port);
+    UDPLGP("local...");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = 0;
@@ -301,9 +300,9 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         printf(FAILED);
         return -2;
     }
-    UDPLGP("OK. ");
+    UDPLGP("OK ");
 
-    UDPLGP("socket connect to remote....");
+    UDPLGP("remote...");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = target_ip.addr;
@@ -313,24 +312,24 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         printf(FAILED);
         return -2;
     }
-    UDPLGP("OK. ");
+    UDPLGP("OK ");
 
-    UDPLGP("create SSL....");
+    UDPLGP("SSL...");
     *ssl = wolfSSL_new(ctx);
     if (!*ssl) {
         printf(FAILED);
         return -2;
     }
-    UDPLGP("OK. ");
+    UDPLGP("OK ");
 
 //wolfSSL_Debugging_ON();
     wolfSSL_set_fd(*ssl, *socket);
-    UDPLGP("set_fd done. ");
+    UDPLGP("set_fd ");
 
     if (verify) ret=wolfSSL_check_domain_name(*ssl, host);
 //wolfSSL_Debugging_OFF();
 
-    UDPLGP("SSL to %s port %d....", host, port);
+    UDPLGP("to %s port %d...", host, port);
     ret = wolfSSL_connect(*ssl);
     if (ret != SSL_SUCCESS) {
         printf("failed, return [-0x%x]\n", -ret);
@@ -338,7 +337,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         printf("wolfSSL_send error = %d\n", ret);
         return -1;
     }
-    UDPLGP(OK);
+    UDPLGP("OK\n");
     return 0;
 
 }
@@ -516,12 +515,11 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     strcat(strcat(strcat(strcat(strcat(strcat(strcat(strcat(strcpy(recv_buf, \
         REQUESTHEAD),repo),"/releases/download/"),version),"/"),file),REQUESTTAIL),HOST),CRLFCRLF);
     send_bytes=strlen(recv_buf);
-    UDPLOG("%s\n",recv_buf);
+    UDPLGP("%s",recv_buf);
 
     retc = ota_connect(HOST, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
     
     if (!retc) {
-        UDPLGP("%s",recv_buf);
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         if (ret > 0) {
             UDPLGP("sent OK\n");
@@ -530,7 +528,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
             if (ret > 0) {
                 recv_buf[ret]=0; //error checking, e.g. not result=206
-                UDPLOG("%s\n",recv_buf);
+                printf("%s\n",recv_buf);
                 location=strstr(recv_buf,"HTTP/1.1 ");
                 strchr(location,' ')[0]=0;
                 location+=9; //flush "HTTP/1.1 "
@@ -547,14 +545,14 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 location+=18; //flush Location: https://
                 //UDPLOG("%s\n",location);
             } else {
-                printf("failed, return [-0x%x]\n", -ret);
+                UDPLGP("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
-                printf("wolfSSL_send error = %d\n", ret);
+                UDPLGP("wolfSSL_send error = %d\n", ret);
             }
         } else {
-            printf("failed, return [-0x%x]\n", -ret);
+            UDPLGP("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
-            printf("wolfSSL_send error = %d\n", ret);
+            UDPLGP("wolfSSL_send error = %d\n", ret);
         }
     }
     switch (retc) {
@@ -588,6 +586,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     strcpy(getlinestart,location);
     //UDPLOG("request:\n%s\n",getlinestart);
     //if (!retc) {
+    UDPLGP("Collecting %d bytes\n",length);
     while (collected<length) {
         sprintf(recv_buf,"%s%d-%d%s",getlinestart,collected,collected+4095,CRLFCRLF);
         send_bytes=strlen(recv_buf);
@@ -653,7 +652,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 header=0; //move to header section itself
             } while(recv_bytes<clength);
             printf(" so far collected %d bytes\n", collected);
-            UDPLOG("%d bytes\r", collected);
+            UDPLOG("\rerased %x collected %d bytes", sector+collected, collected);
         } else {
             printf("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);

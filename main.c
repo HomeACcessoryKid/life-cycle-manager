@@ -24,6 +24,7 @@ void ota_task(void *arg) {
     char* user_file=NULL;
     char*  new_version=NULL;
     char*  ota_version=NULL;
+    char*  lcm_version=NULL;
     signature_t signature;
     extern int active_cert_sector;
     extern int backup_cert_sector;
@@ -33,7 +34,7 @@ void ota_task(void *arg) {
     char keyname[KEYNAMELEN];
     
     if (ota_boot()) UDPLOG("OTABOOT "); else UDPLOG("OTAMAIN ");
-    UDPLOG("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
+    UDPLGP("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
 
     ota_init();
     
@@ -44,7 +45,7 @@ void ota_task(void *arg) {
         ota_get_file(OTAREPO,ota_version,CERTFILE,active_cert_sector);
         ota_finalize_file(active_cert_sector);
     }
-    UDPLOG("active_cert_sector: 0x%05x\n",active_cert_sector);
+    UDPLGP("active_cert_sector: 0x%05x\n",active_cert_sector);
     file_size=ota_get_pubkey(active_cert_sector);
     
     if (!ota_get_privkey()) { //have private key
@@ -66,7 +67,10 @@ void ota_task(void *arg) {
             
             //do we still have a valid internet connexion? dns resolve github... should not be private IP
             
+            ota_get_pubkey(active_cert_sector); //in case the LCM update is in a cycle
+            
             ota_set_verify(0); //should work even without certificates
+            if (lcm_version) free(lcm_version);
             if (ota_version) free(ota_version);
             ota_version=ota_get_version(OTAREPO);
             if (ota_get_hash(OTAREPO, ota_version, CERTFILE, &signature)) { //no certs.sector.sig exists yet on server
@@ -121,10 +125,12 @@ void ota_task(void *arg) {
                         vTaskDelete(NULL); //upload the signature out of band to github and start again
                     }
                 }
+                //switching over to a new repository, called LCM life-cycle-manager
+                lcm_version=ota_get_version(LCMREPO);
                 //now get the latest ota main software in boot sector 1
-                if (ota_get_hash(OTAREPO, ota_version, MAINFILE, &signature)) { //no signature yet
+                if (ota_get_hash(LCMREPO, lcm_version, MAINFILE, &signature)) { //no signature yet
                     if (have_private_key) {
-                        file_size=ota_get_file(OTAREPO,ota_version,MAINFILE,BOOT1SECTOR);
+                        file_size=ota_get_file(LCMREPO,lcm_version,MAINFILE,BOOT1SECTOR);
                         if (file_size<=0) continue; //try again later
                         ota_finalize_file(BOOT1SECTOR);
                         ota_sign(BOOT1SECTOR,file_size, &signature, MAINFILE); //reports to console
@@ -134,13 +140,16 @@ void ota_task(void *arg) {
                     }
                 } else { //we have a signature, maybe also the main file?
                     if (ota_verify_hash(BOOT1SECTOR,&signature)) { //not yet downloaded
-                        file_size=ota_get_file(OTAREPO,ota_version,MAINFILE,BOOT1SECTOR);
+                        file_size=ota_get_file(LCMREPO,lcm_version,MAINFILE,BOOT1SECTOR);
                         if (file_size<=0) continue; //try again later
                         if (ota_verify_hash(BOOT1SECTOR,&signature)) continue; //download failed
                         ota_finalize_file(BOOT1SECTOR);
                     }
                 } //now file is here for sure and matches hash
-                if (ota_verify_signature(&signature)) vTaskDelete(NULL); //this should never happen
+                //when switching to LCM we need to introduce the latest public key as used by LCM
+                ota_get_file(LCMREPO,lcm_version,CERTFILE,backup_cert_sector);
+                ota_get_pubkey(backup_cert_sector);
+                if (ota_verify_signature(&signature)) continue; //this should never happen
                 ota_temp_boot(); //launches the ota software in bootsector 1
             } else {  //running ota-main software now
                 UDPLOG("--- running ota-main software\n");

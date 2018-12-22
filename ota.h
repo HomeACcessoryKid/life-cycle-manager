@@ -6,11 +6,12 @@
  #error You must set OTAVERSION=x.y.z of the ota code to match github version tag x.y.z
 #endif
 #define OTAREPO  "HomeACcessoryKid/life-cycle-manager"
+#define LCMREPO  "HomeACcessoryKid/life-cycle-manager"
 #define MAINFILE "otamain.bin"
 #define BOOTFILE "otaboot.bin"
 #define CERTFILE "certs.sector"
-#define HOLDOFF_MULTIPLIER 10   //more like 20  -> 20s,400 (~6min),8000 (~2h),160000 (~2days)
-#define HOLDOFF_MAX 900         //more like 604800 (1 week)
+#define HOLDOFF_MULTIPLIER 20   //more like 20  -> 20s,400 (~6min),8000 (~2h),160000 (~2days)
+#define HOLDOFF_MAX 604800      //more like 604800 (1 week)
 
 #define SECTORSIZE 4096
 #define HIGHERCERTSECTOR 0xF6000
@@ -21,7 +22,6 @@
 #define HTTPS_PORT 443
 #define LOCAL_PORT_START 49152
 #define FAILED "failed\n"
-#define OK "OK\n"
 #define REQUESTHEAD "GET /"
 #define REQUESTTAIL " HTTP/1.1\r\nHost: "
 #define CRLFCRLF "\r\n\r\n"
