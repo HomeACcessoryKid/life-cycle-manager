@@ -1,5 +1,5 @@
 /*  (c) 2018 HomeAccessoryKid */
-#include <stdlib.h>  //for UDPLOG
+#include <stdlib.h>  //for UDPLGP
 #include <stdio.h>
 #include <string.h>
 
@@ -31,7 +31,7 @@ WOLFSSL_CTX* ctx;
 #ifdef DEBUG_WOLFSSL    
 void MyLoggingCallback(const int logLevel, const char* const logMessage) {
     /*custom logging function*/
-    UDPLOG("loglevel: %d - %s\n",logLevel, logMessage);
+    UDPLGP("loglevel: %d - %s\n",logLevel, logMessage);
 }
 #endif
 
@@ -67,7 +67,7 @@ void  ota_init() {
 	sntp_set_servers(servers, sizeof(servers) / sizeof(char*)); //Servers must be configured right after initialization
 
 #ifdef DEBUG_WOLFSSL    
-    if (wolfSSL_SetLoggingCb(MyLoggingCallback)) UDPLOG("error setting debug callback\n");
+    if (wolfSSL_SetLoggingCb(MyLoggingCallback)) UDPLGP("error setting debug callback\n");
 #endif
     
     wolfSSL_Init();
@@ -87,25 +87,25 @@ void  ota_init() {
     active_cert_sector=HIGHERCERTSECTOR;
     backup_cert_sector=LOWERCERTSECTOR;
     if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) { //get first 4 active
-        UDPLOG("error reading flash\n");
+        UDPLGP("error reading flash\n");
     } // if OTHER  vvvvvv sector active
     if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 ) {
         active_cert_sector=LOWERCERTSECTOR;
         backup_cert_sector=HIGHERCERTSECTOR;
         if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) {
-            UDPLOG("error reading flash\n");
+            UDPLGP("error reading flash\n");
         }
         if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 ) {
             active_cert_sector=0;
             backup_cert_sector=0;
         }
     }
-    UDPLOG("active_sector: 0x%x\n",active_cert_sector);
+    UDPLGP("active_sector: 0x%x\n",active_cert_sector);
     ota_set_verify(0);
 }
 
 int ota_get_privkey() {
-    printf("--- ota_get_privkey\n");
+    UDPLGP("--- ota_get_privkey\n");
     
     byte buffer[PKEYSIZE]; //maybe 49 bytes would be enough
     int ret;
@@ -114,7 +114,7 @@ int ota_get_privkey() {
     
     //load private key as produced by openssl
     if (!spiflash_read(backup_cert_sector, (byte *)buffer, 24)) {
-        printf("error reading flash\n");    return -1;
+        UDPLGP("error reading flash\n");    return -1;
     }
     if (buffer[0]!=0x30 || buffer[1]!=0x81) return -2; //not a valid keyformat
     if (buffer[3]!=0x02 || buffer[4]!=0x01 || buffer[5]!=0x01) return -2; //not a valid keyformat
@@ -123,7 +123,7 @@ int ota_get_privkey() {
     length=buffer[idx++]; //bitstring start
     
     if (!spiflash_read(backup_cert_sector+idx, (byte *)buffer, length)) {
-        UDPLOG("error reading flash\n");    return -1;
+        UDPLGP("error reading flash\n");    return -1;
     }
     for (idx=0;idx<length;idx++) printf(" %02x",buffer[idx]);
     wc_ecc_init(&prvecckey);
@@ -143,7 +143,7 @@ int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, 
     int length,ret;
     //load public key as produced by openssl
     if (!spiflash_read(sector, (byte *)buffer, PKEYSIZE)) {
-        UDPLOG("error reading flash\n");    return -1;
+        UDPLGP("error reading flash\n");    return -1;
     }
     if (buffer[ 0]!=0x30 || buffer[ 1]!=0x76 || buffer[ 2]!=0x30) return -2; //not a valid keyformat
     if (buffer[20]!=0x03 || buffer[21]!=0x62 || buffer[22]!=0x00) return -2; //not a valid keyformat
@@ -152,7 +152,8 @@ int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, 
     int idx; for (idx=0;idx<length;idx++) printf(" %02x",buffer[idx+23]);
     wc_ecc_init(&pubecckey);
     ret=wc_ecc_import_x963_ex(buffer+23,length,&pubecckey,ECC_SECP384R1);
-    printf("\nret: %d\n",ret);
+    printf("\n");
+    UDPLGP("ret: %d\n",ret);
 
     if (!ret)return PKEYSIZE; else return ret;
 }
@@ -163,7 +164,7 @@ int ota_verify_pubkey(void) { //check if public and private key are a pair
     byte hash[HASHSIZE];
     WC_RNG rng;
     wc_RNG_GenerateBlock(&rng, hash, HASHSIZE);
-    //int i; UDPLOG("hash: "); for (i=0;i<HASHSIZE;i++) UDPLOG("%02x ",hash[i]); UDPLOG("\n");
+    //int i; printf("hash: "); for (i=0;i<HASHSIZE;i++) printf("%02x ",hash[i]); printf("\n");
     
     int answer;
     unsigned int siglen=SIGNSIZE;
@@ -172,7 +173,7 @@ int ota_verify_pubkey(void) { //check if public and private key are a pair
     wc_ecc_sign_hash(hash, HASHSIZE, signature, &siglen, &rng, &prvecckey);
     wc_ecc_verify_hash(signature, siglen, hash, HASHSIZE, &answer, &pubecckey);
     
-    UDPLOG("key valid: %d\n",answer);
+    UDPLGP("key valid: %d\n",answer);
         
     return answer-1;
 }
@@ -185,27 +186,27 @@ void ota_hash(int start_sector, int filesize, byte * hash, byte first_byte) {
     Sha384 sha;
     
     wc_InitSha384(&sha);
-    //UDPLOG("bytes: ");
+    //printf("bytes: ");
     for (bytes=0;bytes<filesize-1024;bytes+=1024) {
-        //UDPLOG("%d ",bytes);
+        //printf("%d ",bytes);
         if (!spiflash_read(start_sector+bytes, (byte *)buffer, 1024)) {
-            UDPLOG("error reading flash\n");   break;
+            UDPLGP("error reading flash\n");   break;
         }
         if (!bytes && first_byte!=0xff) buffer[0]=first_byte;
         wc_Sha384Update(&sha, buffer, 1024);
     }
-    //UDPLOG("%d\n",bytes);
+    //printf("%d\n",bytes);
     if (!spiflash_read(start_sector+bytes, (byte *)buffer, filesize-bytes)) {
-        UDPLOG("error reading flash\n");
+        UDPLGP("error reading flash\n");
     }
     if (!bytes && first_byte!=0xff) buffer[0]=first_byte;
-    //UDPLOG("filesize %d\n",filesize);
+    //printf("filesize %d\n",filesize);
     wc_Sha384Update(&sha, buffer, filesize-bytes);
     wc_Sha384Final(&sha, hash);
 }
 
 void ota_sign(int start_sector, int filesize, signature_t* signature, char* file) {
-    printf("--- ota_sign\n");
+    UDPLGP("--- ota_sign\n");
     
     unsigned int i,siglen=SIGNSIZE;
     WC_RNG rng;
@@ -220,6 +221,7 @@ void ota_sign(int start_sector, int filesize, signature_t* signature, char* file
 
 int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-release or older,-1)
     UDPLGP("--- ota_compare ");
+    printf("\n");
     char* dot;
     int valuen=0,valueo=0;
     char news[MAXVERSIONLEN],olds[MAXVERSIONLEN];
@@ -249,7 +251,7 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
         if (valuen>valueo) result=1;
         if (valuen<valueo) result=-1;        
     } //they are equal
-    UDPLGP("%d\n",result);
+    UDPLGP("%s with %s=%d",newv,oldv,result);
     return result; //equal strings
 }
 
@@ -285,7 +287,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     //printf("create socket ......");
     *socket = socket(AF_INET, SOCK_STREAM, 0);
     if (*socket < 0) {
-        printf(FAILED);
+        UDPLGP(FAILED);
         return -3;
     }
 
@@ -297,7 +299,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     if (local_port==65536) local_port=LOCAL_PORT_START;
     ret = bind(*socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
     if (ret) {
-        printf(FAILED);
+        UDPLGP(FAILED);
         return -2;
     }
     UDPLGP("OK ");
@@ -309,7 +311,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     sock_addr.sin_port = htons(port);
     ret = connect(*socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
     if (ret) {
-        printf(FAILED);
+        UDPLGP(FAILED);
         return -2;
     }
     UDPLGP("OK ");
@@ -317,7 +319,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     UDPLGP("SSL..");
     *ssl = wolfSSL_new(ctx);
     if (!*ssl) {
-        printf(FAILED);
+        UDPLGP(FAILED);
         return -2;
     }
     UDPLGP("OK ");
@@ -332,9 +334,9 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     UDPLGP("to %s port %d..", host, port);
     ret = wolfSSL_connect(*ssl);
     if (ret != SSL_SUCCESS) {
-        printf("failed, return [-0x%x]\n", -ret);
+        UDPLGP("failed, return [-0x%x]\n", -ret);
         ret=wolfSSL_get_error(*ssl,ret);
-        printf("wolfSSL_send error = %d\n", ret);
+        UDPLGP("wolfSSL_send error = %d\n", ret);
         return -1;
     }
     UDPLGP("OK\n");
@@ -375,27 +377,27 @@ void  ota_set_verify(int onoff) {
             verify= 1;
             do {
                 if (!spiflash_read(active_cert_sector+PKEYSIZE+(ret++), (byte *)abyte, 1)) {
-                    UDPLOG("error reading flash\n");
+                    UDPLGP("error reading flash\n");
                     break;
                 }
             } while (abyte[0]!=0xff); ret--;
-            UDPLOG("certs size: %d\n",ret);
+            UDPLGP("certs size: %d\n",ret);
             byte *certs=malloc(ret);
             spiflash_read(active_cert_sector+PKEYSIZE, (byte *)certs, ret);
 
             ret=wolfSSL_CTX_load_verify_buffer(ctx, certs, ret, SSL_FILETYPE_PEM);
             if ( ret != SSL_SUCCESS) {
-                UDPLOG("fail cert loading, return %d\n", ret);
+                UDPLGP("fail cert loading, return %d\n", ret);
             }
             free(certs);
             
             time_t ts;
             do {
                 ts = time(NULL);
-                if (ts == ((time_t)-1)) UDPLOG("ts=-1, ");
+                if (ts == ((time_t)-1)) printf("ts=-1, ");
                 vTaskDelay(1);
             } while (!(ts>1073741823)); //2^30-1 which is supposed to be like 2004
-            UDPLOG("TIME: %s", ctime(&ts)); //we need to have the clock right to check certificates
+            UDPLGP("TIME: %s", ctime(&ts)); //we need to have the clock right to check certificates
             
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
         }
@@ -426,7 +428,7 @@ char* ota_get_version(char * repo) {
     strcat(strcat(strcat(strcat(strcat(strcpy(recv_buf, \
         REQUESTHEAD),repo),"/releases/latest"),REQUESTTAIL),HOST),CRLFCRLF);
     send_bytes=strlen(recv_buf);
-    //UDPLOG("%s\n",recv_buf);
+    //printf("%s\n",recv_buf);
 
     retc = ota_connect(HOST, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
     
@@ -440,15 +442,15 @@ char* ota_get_version(char * repo) {
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
             if (ret > 0) {
                 recv_buf[ret]=0; //error checking
-                //UDPLOG("%s\n",recv_buf);
+                //printf("%s\n",recv_buf);
 
                 location=strstr(recv_buf,"Location: ");
                 strchr(location,'\r')[0]=0;
-                //UDPLOG("%s\n",location);
+                //printf("%s\n",location);
                 location=strstr(location,"tag/");
                 version=malloc(strlen(location+4));
                 strcpy(version,location+4);
-                printf("%s@version:\"%s\"\n",repo,version);
+                printf("%s@version:\"%s\" according to latest release\n",repo,version);
             } else {
                 UDPLGP("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
@@ -543,7 +545,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 location=strstr(recv_buf,"Location: ");
                 strchr(location,'\r')[0]=0;
                 location+=18; //flush Location: https://
-                //UDPLOG("%s\n",location);
+                //printf("%s\n",location);
             } else {
                 UDPLGP("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
@@ -575,7 +577,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     location[slash]=0; //cut behind the hostname
     char * host2=malloc(strlen(location));
     strcpy(host2,location);
-    //UDPLOG("next host: %s\n",host2);
+    //printf("next host: %s\n",host2);
 
     retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
 
@@ -584,12 +586,12 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     memcpy(location,REQUESTHEAD,5);
     char * getlinestart=malloc(strlen(location));
     strcpy(getlinestart,location);
-    //UDPLOG("request:\n%s\n",getlinestart);
+    //printf("request:\n%s\n",getlinestart);
     //if (!retc) {
     while (collected<length) {
         sprintf(recv_buf,"%s%d-%d%s",getlinestart,collected,collected+4095,CRLFCRLF);
         send_bytes=strlen(recv_buf);
-        //UDPLOG("request:\n%s\n",recv_buf);
+        //printf("request:\n%s\n",recv_buf);
         printf("send request......");
         ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         recv_bytes=0;
@@ -603,7 +605,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 ret = wolfSSL_read(ssl, recv_buf, RECV_BUF_LEN - 1);
                 if (ret > 0) {
                     if (header) {
-                        //UDPLOG("%s\n-------- %d\n", recv_buf, ret);
+                        //printf("%s\n-------- %d\n", recv_buf, ret);
                         //parse Content-Length: xxxx
                         location=strstr(recv_buf,"Content-Length: ");
                         strchr(location,'\r')[0]=0;
@@ -644,7 +646,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         printf(" ");
                     }
                 } else {
-                    if (ret) {ret=wolfSSL_get_error(ssl,ret); printf("error %d\n",ret);}
+                    if (ret) {ret=wolfSSL_get_error(ssl,ret); UDPLGP("error %d\n",ret);}
                     if (!ret && collected<length) retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl); //memory leak?
                     break;
                 }
@@ -682,7 +684,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
 void  ota_finalize_file(int sector) {
     UDPLGP("--- ota_finalize_file\n");
 
-    if (!spiflash_write(sector, file_first_byte, 1)) UDPLOG("error writing flash\n");
+    if (!spiflash_write(sector, file_first_byte, 1)) UDPLGP("error writing flash\n");
     //TODO: add verification and retry and if wrong return status...
 }
 
@@ -734,8 +736,8 @@ int   ota_verify_hash(int address, signature_t* signature) {
     byte hash[HASHSIZE];
     ota_hash(address, signature->size, hash, file_first_byte[0]);
 //     int i;
-//     UDPLOG("signhash:"); for (i=0;i<HASHSIZE;i++) UDPLOG(" %02x",signature->hash[i]); UDPLOG("\n");
-//     UDPLOG("calchash:"); for (i=0;i<HASHSIZE;i++) UDPLOG(" %02x",           hash[i]); UDPLOG("\n");
+//     printf("signhash:"); for (i=0;i<HASHSIZE;i++) printf(" %02x",signature->hash[i]); printf("\n");
+//     printf("calchash:"); for (i=0;i<HASHSIZE;i++) printf(" %02x",           hash[i]); printf("\n");
     
     if (memcmp(hash,signature->hash,HASHSIZE)) ota_hash(address, signature->size, hash, 0xff);
     
@@ -748,7 +750,7 @@ int   ota_verify_signature(signature_t* signature) {
     int answer=0;
 
     wc_ecc_verify_hash(signature->sign, SIGNSIZE, signature->hash, HASHSIZE, &answer, &pubecckey);
-    UDPLOG("signature valid: %d\n",answer);
+    UDPLGP("signature valid: %d\n",answer);
         
     return answer-1;
 }
@@ -757,7 +759,7 @@ void  ota_kill_file(int sector) {
     UDPLGP("--- ota_kill_file\n");
 
     byte zero[]={0x00};
-    if (!spiflash_write(sector, zero, 1)) UDPLOG("error writing flash\n");
+    if (!spiflash_write(sector, zero, 1)) UDPLGP("error writing flash\n");
 }
 
 void  ota_swap_cert_sector() {

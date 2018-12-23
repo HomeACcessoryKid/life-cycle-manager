@@ -3,7 +3,7 @@
  * use local.mk to turn it into the LCM otamain.bin app or the otaboot.bin app
  */
 
-#include <stdlib.h>  //for UDPLOG and free
+#include <stdlib.h>  //for UDPLGP and free
 #include <stdio.h>
 #include <esp/uart.h>
 #include <esp8266.h>
@@ -33,7 +33,7 @@ void ota_task(void *arg) {
     int keyid,foundkey=0;
     char keyname[KEYNAMELEN];
     
-    if (ota_boot()) UDPLOG("OTABOOT "); else UDPLOG("OTAMAIN ");
+    if (ota_boot()) UDPLGP("OTABOOT "); else UDPLGP("OTAMAIN ");
     UDPLGP("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
 
     ota_init();
@@ -50,7 +50,7 @@ void ota_task(void *arg) {
     
     if (!ota_get_privkey()) { //have private key
         have_private_key=1;
-        UDPLOG("have private key\n");
+        UDPLGP("have private key\n");
         if (ota_verify_pubkey()) ota_sign(active_cert_sector,file_size, &signature, "pub-1.key");//use this (old) privkey to sign the (new) pubkey
     }
 
@@ -59,8 +59,8 @@ void ota_task(void *arg) {
         //new_version=ota_get_version(user_repo); //consider that if here version is equal, we end it already
         //if (!ota_compare(new_version,user_version)) { //allows a denial of update so not doing it for now
         for (;;) { //escape from this loop by continue (try again) or break (boots into slot 0)
-            UDPLOG("--- entering the loop\n");
-            //UDPLOG("%d\n",sdk_system_get_time()/1000);
+            UDPLGP("--- entering the loop\n");
+            //UDPLGP("%d\n",sdk_system_get_time()/1000);
             //need for a protection against an electricity outage recovery storm
             vTaskDelay(holdoff_time*(1000/portTICK_PERIOD_MS));
             holdoff_time*=HOLDOFF_MULTIPLIER; holdoff_time=(holdoff_time<HOLDOFF_MAX) ? holdoff_time : HOLDOFF_MAX;
@@ -147,12 +147,12 @@ void ota_task(void *arg) {
                     }
                 } //now file is here for sure and matches hash
                 //when switching to LCM we need to introduce the latest public key as used by LCM
-                ota_get_file(LCMREPO,lcm_version,CERTFILE,backup_cert_sector);
-                ota_get_pubkey(backup_cert_sector);
+                //ota_get_file(LCMREPO,lcm_version,CERTFILE,backup_cert_sector);
+                //ota_get_pubkey(backup_cert_sector);
                 if (ota_verify_signature(&signature)) continue; //this should never happen
                 ota_temp_boot(); //launches the ota software in bootsector 1
             } else {  //running ota-main software now
-                UDPLOG("--- running ota-main software\n");
+                UDPLGP("--- running ota-main software\n");
                 //if there is a newer version of ota-main...
                 if (ota_compare(ota_version,OTAVERSION)>0) { //set OTAVERSION when running make and match with github
                     ota_get_hash(OTAREPO, ota_version, BOOTFILE, &signature);
@@ -166,7 +166,7 @@ void ota_task(void *arg) {
                 if (new_version) free(new_version);
                 new_version=ota_get_version(user_repo);
                 if (ota_compare(new_version,user_version)>0) { //can only upgrade
-                    UDPLOG("user_repo=\'%s\' new_version=\'%s\' user_file=\'%s\'\n",user_repo,new_version,user_file);
+                    UDPLGP("user_repo=\'%s\' new_version=\'%s\' user_file=\'%s\'\n",user_repo,new_version,user_file);
                     ota_get_hash(user_repo, new_version, user_file, &signature);
                     file_size=ota_get_file(user_repo,new_version,user_file,BOOT0SECTOR);
                     if (file_size<=0 || ota_verify_hash(BOOT0SECTOR,&signature)) continue; //something went wrong, but now boot0 is broken so start over
@@ -184,14 +184,14 @@ void ota_task(void *arg) {
 void on_wifi_ready() {
     xTaskCreate(udplog_send, "logsend", 256, NULL, 4, NULL);
     xTaskCreate(ota_task,"ota",4096,NULL,1,NULL);
-    UDPLOG("wifiready-done\n");
+    UDPLGP("wifiready-done\n");
 }
 
 void user_init(void) {
-    UDPLOG("\n\n\n\n\n\n\nuser-init-start\n");
+    UDPLGP("\n\n\n\n\n\n\nuser-init-start\n");
 //    uart_set_baud(0, 74880);
     uart_set_baud(0, 115200);
 
     wifi_config_init("LCM", NULL, on_wifi_ready); //expanded it with setting repo-details
-    UDPLOG("user-init-done\n");
+    UDPLGP("user-init-done\n");
 }

@@ -28,8 +28,7 @@
 #define RECV_BUF_LEN 1025  // current length of amazon URL 724
 #define RANGE "\r\nRange: bytes="
 #define MAXVERSIONLEN 16
-#define SNTP_SERVERS 	"0.pool.ntp.org", "1.pool.ntp.org", \
-						"2.pool.ntp.org", "3.pool.ntp.org"
+#define SNTP_SERVERS 	"0.pool.ntp.org", "1.pool.ntp.org", "2.pool.ntp.org", "3.pool.ntp.org"
 
 #define ECDSAKEYLENGTHMAX 128 //to be verified better, example is 120 bytes secP384r1
 #define HASHSIZE  48  //SHA-384
