@@ -476,8 +476,6 @@ char* ota_get_version(char * repo) {
 //     if (retc) return retc;
 //     if (ret <= 0) return ret;
 
-    if (ota_boot() && ota_compare(version,OTAVERSION)<0) strcpy(version,OTAVERSION);
-    
     //find latest-pre-release if joined beta program
     if ( (userbeta && strcmp(OTAREPO,repo)) || (otabeta && !strcmp(OTAREPO,repo)) ) {
         prerelease[63]=0;
@@ -488,6 +486,12 @@ char* ota_get_version(char * repo) {
             version=malloc(strlen(prerelease)+1);
             strcpy(version,prerelease);
         }
+    }
+    
+    if (ota_boot() && ota_compare(version,OTAVERSION)<0) { //this acts when setting up a new version
+        free(version);
+        version=malloc(strlen(OTAVERSION)+1);
+        strcpy(version,OTAVERSION);
     }
     
     UDPLGP("%s@version:\"%s\"\n",repo,version);
