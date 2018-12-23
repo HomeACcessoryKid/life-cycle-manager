@@ -230,29 +230,31 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
     int result=0;
     
     if (strcmp(newv,oldv)) { //https://semver.org/#spec-item-11
-        if (strchr(newv,'-')) result=-1; //we cannot handle versions with pre-release suffix notation (yet)
-        //pre-release marker in github serves to identify those
-        strncpy(new,newv,MAXVERSIONLEN-1);
-        strncpy(old,oldv,MAXVERSIONLEN-1);
-        if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
-        if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
-        printf("%d-%d,%s-%s\n",valuen,valueo,new,old);
-        if (valuen>valueo) result=1;
-        if (valuen<valueo) result=-1;
-        valuen=valueo=0;
-        if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
-        if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
-        printf("%d-%d,%s-%s\n",valuen,valueo,new,old);
-        if (valuen>valueo) result=1;
-        if (valuen<valueo) result=-1;
-        valuen=atoi(new);
-        valueo=atoi(old);
-        printf("%d-%d\n",valuen,valueo);
-        if (valuen>valueo) result=1;
-        if (valuen<valueo) result=-1;        
+        do {
+            if (strchr(newv,'-')) {result=-1;break;} //we cannot handle versions with pre-release suffix notation (yet)
+            //pre-release marker in github serves to identify those
+            strncpy(new,newv,MAXVERSIONLEN-1);
+            strncpy(old,oldv,MAXVERSIONLEN-1);
+            if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
+            if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
+            printf("%d-%d,%s-%s\n",valuen,valueo,new,old);
+            if (valuen>valueo) {result= 1;break;}
+            if (valuen<valueo) {result=-1;break;}
+            valuen=valueo=0;
+            if ((dot=strchr(new,'.'))) {dot[0]=0; valuen=atoi(new); new=dot+1;}
+            if ((dot=strchr(old,'.'))) {dot[0]=0; valueo=atoi(old); old=dot+1;}
+            printf("%d-%d,%s-%s\n",valuen,valueo,new,old);
+            if (valuen>valueo) {result= 1;break;}
+            if (valuen<valueo) {result=-1;break;}
+            valuen=atoi(new);
+            valueo=atoi(old);
+            printf("%d-%d\n",valuen,valueo);
+            if (valuen>valueo) {result= 1;break;}
+            if (valuen<valueo) {result=-1;break;}        
+        } while(0);
     } //they are equal
-    UDPLGP("%s with %s=%d",newv,oldv,result);
-    return result; //equal strings
+    UDPLGP("%s with %s=%d\n",newv,oldv,result);
+    return result;
 }
 
 static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
