@@ -51,7 +51,10 @@ void ota_task(void *arg) {
     if (!ota_get_privkey()) { //have private key
         have_private_key=1;
         UDPLGP("have private key\n");
-        if (ota_verify_pubkey()) ota_sign(active_cert_sector,file_size, &signature, "pub-1.key");//use this (old) privkey to sign the (new) pubkey
+        if (ota_verify_pubkey()) {
+            ota_sign(active_cert_sector,file_size, &signature, "public-1.key");//use this (old) privkey to sign the (new) pubkey
+            vTaskDelete(NULL); //upload the signature out of band to github and flash the new private key to backupsector
+        }
     }
 
     if (ota_boot()) ota_write_status("0.0.0");  //we will have to get user code from scratch if running ota_boot
@@ -88,7 +91,7 @@ void ota_task(void *arg) {
                 }
                 if (ota_verify_signature(&signature)) { //maybe an update on the public key
                     keyid=1;
-                    while (sprintf(keyname,KEYNAME,keyid) , ota_get_hash(OTAREPO, ota_version, keyname, &signature)) {
+                    while (sprintf(keyname,KEYNAME,keyid) , !ota_get_hash(OTAREPO, ota_version, keyname, &signature)) {
                         if (!ota_verify_signature(&signature)) {foundkey=1; break;}
                         keyid++;
                     }
