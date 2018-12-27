@@ -85,10 +85,6 @@ void ota_task(void *arg) {
                 }
             }
             if (ota_verify_hash(active_cert_sector,&signature)) { //seems we need to download certificates
-                ota_get_file(OTAREPO,ota_version,CERTFILE,backup_cert_sector);
-                if (ota_verify_hash(backup_cert_sector,&signature)) { //hash and file do not match
-                    break; //leads to boot=0
-                }
                 if (ota_verify_signature(&signature)) { //maybe an update on the public key
                     keyid=1;
                     while (sprintf(keyname,KEYNAME,keyid) , !ota_get_hash(OTAREPO, ota_version, keyname, &signature)) {
@@ -98,15 +94,17 @@ void ota_task(void *arg) {
                     if (!foundkey) break; //leads to boot=0
                     //we found the head of the chain of pubkeys
                     while (--keyid) {
-                        if (ota_get_newkey(OTAREPO,ota_version,keyname,&signature)) {foundkey=0; break;}//contains a check of hash inside
+                        ota_get_file(OTAREPO,ota_version,keyname,backup_cert_sector);
+                        if (ota_verify_hash(backup_cert_sector,&signature)) {foundkey=0; break;}
+                        ota_get_pubkey(backup_cert_sector); //get one newer pubkey
                         sprintf(keyname,KEYNAME,keyid);
                         if (ota_get_hash(OTAREPO,ota_version,keyname,&signature)) {foundkey=0; break;}
                         if (ota_verify_signature(&signature)) {foundkey=0; break;}
                     }
                     if (!foundkey) break; //leads to boot=0
-                    //now lets check if the backup_cert_sector contains the true pubkey
-                    if (ota_verify_hash(backup_cert_sector,&signature)) break; //leads to boot=0
                 }
+                ota_get_file(OTAREPO,ota_version,CERTFILE,backup_cert_sector); //CERTFILE=public-1.key
+                if (ota_verify_hash(backup_cert_sector,&signature)) break; //leads to boot=0
                 ota_swap_cert_sector();
                 ota_get_pubkey(active_cert_sector);
             } //certificates are good now

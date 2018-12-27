@@ -698,25 +698,7 @@ int   ota_get_file(char * repo, char * version, char * file, int sector) { //num
     UDPLGP("--- ota_get_file\n");
     return ota_get_file_ex(repo,version,file,sector,NULL,0);
 }
-int   ota_get_newkey(char * repo, char * version, char * file, signature_t* signature) { //success
-    UDPLGP("--- ota_get_newkey\n");
-    
-    byte pkeybuffer[PKEYSIZE];
-    int length;
-    byte hash[HASHSIZE];
-    Sha384 sha;
-    
-    length=ota_get_file_ex(repo,version,file,0,pkeybuffer,PKEYSIZE);
-    wc_InitSha384(&sha);
-    wc_Sha384Update(&sha, pkeybuffer, length);
-    wc_Sha384Final(&sha, hash);
 
-    if (!memcmp(hash,signature->hash,HASHSIZE)) { //this key is proven to be covered by the signature
-        wc_ecc_free(&pubecckey); //replace the pubkey with a newer one
-        wc_ecc_init(&pubecckey); //load newecckey
-        return wc_ecc_import_x963_ex(pkeybuffer,length,&pubecckey,ECC_SECP384R1);
-    } else return -1;
-}
 int   ota_get_hash(char * repo, char * version, char * file, signature_t* signature) {
     UDPLGP("--- ota_get_hash\n");
     int ret;
