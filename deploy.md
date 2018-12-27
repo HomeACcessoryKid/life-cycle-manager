@@ -94,7 +94,7 @@ xxd -p secp384r1pub.der
 
 - open certs.hex and replace the first 4 rows with the public key xxd output, then make the new certs.sector
 ```
-vi certs.hex; xxd -p -r certs.hex > certs.sector
+vi versions2/certs.hex; xxd -p -r versions2/certs.hex > versions2/certs.sector
 ```
 - start a new release as described above, but in the first run, use the previous private key in 0xf5000
 ```
