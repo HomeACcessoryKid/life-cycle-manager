@@ -10,50 +10,51 @@ cd life-cycle-manager
 - initial steps to be expanded
 
 #### These are the steps if not introducing a new key pair
-- create/update the file versions1/latest-pre-release without new-line and setup 0.9.8 version folder
+- create/update the file versions2/latest-pre-release without new-line and setup 0.9.9 version folder
 ```
-echo -n 0.9.8 > versions1/latest-pre-release
-mkdir versions1/0.9.8v
-cp versions1/certs.sector* versions1/0.9.8v
-cp versions1/public*key*   versions1/0.9.8v
+echo -n 0.9.9 > versions2/latest-pre-release
+mkdir versions2/0.9.9v
+cp versions2/certs.sector* versions2/0.9.9v
+cp versions2/public*key*   versions2/0.9.9v
 ```
 - set local.mk to the ota-main program
 ```
-make -j6 rebuild OTAVERSION=0.9.8
-mv firmware/otamain.bin versions1/0.9.8v
+make -j6 rebuild OTAVERSION=0.9.9
+mv firmware/otamain.bin versions2/0.9.9v
 ```
 - set local.mk back to ota-boot program
 ```
-make -j6 rebuild OTAVERSION=0.9.8
-mv firmware/otaboot.bin versions1/0.9.8v
-make -j6 rebuild OTAVERSION=0.9.8 OTABETA=1
-cp firmware/otaboot.bin versions1/0.9.8v/otabootbeta.bin
+make -j6 rebuild OTAVERSION=0.9.9
+mv firmware/otaboot.bin versions2/0.9.9v
+make -j6 rebuild OTAVERSION=0.9.9 OTABETA=1
+cp firmware/otaboot.bin versions2/0.9.9v/otabootbeta.bin
 ```
 - remove the older version files
 #
-- commit this as version 0.9.8  
-- set up a new github release 0.9.8 as a pre-release using the just commited master...  
+- commit this as version 0.9.9  
+- set up a new github release 0.9.9 as a pre-release using the just commited master...  
 - upload the certs and binaries to the pre-release assets on github  
 #
 - erase the flash and upload the privatekey
 ```
 esptool.py -p /dev/cu.usbserial-* --baud 230400 erase_flash 
-esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions1-privatekey.der
+esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions2-privatekey.der
 ```
 - upload the ota-boot BETA program to the device that contains the private key
 ```
-make flash OTAVERSION=0.9.8 OTABETA=1
+make flash OTAVERSION=0.9.9 OTABETA=1
 ```
 - power cycle to prevent the bug for software reset after flash  
 - setup wifi and select the ota-demo repo without pre-release checkbox  
 - create the 2 signature files next to the bin file and upload to github one by one  
 - verify the hashes on the computer  
 ```
-openssl sha384 versions1/0.9.8v/otamain.bin
-xxd versions1/0.9.8v/otamain.bin.sig
+openssl sha384 versions2/0.9.9v/otamain.bin
+xxd versions2/0.9.9v/otamain.bin.sig
 ```
 
-- upload the file versions1/latest-pre-release to the 'latest release' assets on github
+- upload the file versions2/latest-pre-release to the 'latest release' assets on github
+
 #### Testing
 
 - test the release with several devices that have the beta flag set  
@@ -63,13 +64,13 @@ xxd versions1/0.9.8v/otamain.bin.sig
 - make the release a production release on github  
 - remove the private key  
 ```
-esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions1/blank.bin
+esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions2/blank.bin
 ```
 
 
 ### How to make a new signing key pair
 
-- use the finder to duplicate the content from the previous versions folder => call it versions1  
+- use the finder to duplicate the content from the previous versions folder => call it versions2  
 - push all existing public-N.key.sig and public-N.key files one number up  
 - e.g. if a public-2.key.sig already exists, this would then be renamed to public-3.key.sig etc...  
 - rename the duplicated cert.sector to public-2.key
@@ -99,16 +100,16 @@ vi certs.hex; xxd -p -r certs.hex > certs.sector
 ```
 esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versionsN-1-privatekey.der
 ```
-- collect public-1.key.sig and store it in the new version folder and copy it to versions1
+- collect public-1.key.sig and store it in the new version folder and copy it to versions2
 ```
-cp  versions1/0.9.8v/public-1.key.sig versions1
+cp  versions2/0.9.9v/public-1.key.sig versions2
 ```
 - then flash the new private key
 ```
-esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions1-privatekey.der
+esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions2-privatekey.der
 ```
-- collect cert.sector.sig and store it in the new version folder and copy it to versions1 
+- collect cert.sector.sig and store it in the new version folder and copy it to versions2 
 ```
-cp  versions1/0.9.8v/cert.sector.sig versions1
+cp  versions2/0.9.9v/cert.sector.sig versions2
 ```
 - continue with a normal deployment to create the 2 signature files next to the bin files
