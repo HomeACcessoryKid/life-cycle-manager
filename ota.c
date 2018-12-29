@@ -82,9 +82,9 @@ void  ota_init() {
     extern int active_cert_sector;
     extern int backup_cert_sector;
     // set active_cert_sector
-    // LAST byte of the sector is its state:
+    // first byte of the sector is its state:
     // 0xff backup being evaluated
-    // 0xf0 active sector
+    // 0x30 active sector
     // 0x00 deactivated
     byte fourbyte[4];
     active_cert_sector=HIGHERCERTSECTOR;
@@ -92,13 +92,13 @@ void  ota_init() {
     if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) { //get first 4 active
         UDPLGP("error reading flash\n");
     } // if OTHER  vvvvvv sector active
-    if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 ) {
+    if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 || fourbyte[3]!=0x10 ) {
         active_cert_sector=LOWERCERTSECTOR;
         backup_cert_sector=HIGHERCERTSECTOR;
         if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) {
             UDPLGP("error reading flash\n");
         }
-        if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 ) {
+        if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 || fourbyte[3]!=0x10 ) {
             active_cert_sector=0;
             backup_cert_sector=0;
         }

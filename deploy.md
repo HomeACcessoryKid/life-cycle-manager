@@ -12,7 +12,7 @@ cd life-cycle-manager
 #### These are the steps if not introducing a new key pair
 - create/update the file versions3/latest-pre-release without new-line and setup 0.9.13 version folder
 ```
-echo -n 0.9.13 > versions3/latest-pre-release
+echo -n 0.9.13 > versions3/0.9.13v/latest-pre-release
 mkdir versions3/0.9.13v
 cp versions3/certs.sector* versions3/0.9.13v
 cp versions3/public*key*   versions3/0.9.13v
@@ -53,7 +53,7 @@ openssl sha384 versions3/0.9.13v/otamain.bin
 xxd versions3/0.9.13v/otamain.bin.sig
 ```
 
-- upload the file versions3/latest-pre-release to the 'latest release' assets on github
+- upload the file versions3/0.9.13v/latest-pre-release to the 'latest release' assets on github
 
 #### Testing
 
