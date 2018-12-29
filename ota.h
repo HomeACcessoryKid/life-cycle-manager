@@ -20,7 +20,6 @@
 #define BOOT1SECTOR 0x8D000 //must match the program1.ld value!!
 #define HOST "github.com"
 #define HTTPS_PORT 443
-#define LOCAL_PORT_START 49152
 #define FAILED "failed\n"
 #define REQUESTHEAD "GET /"
 #define REQUESTTAIL " HTTP/1.1\r\nHost: "

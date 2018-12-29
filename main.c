@@ -183,7 +183,7 @@ void ota_task(void *arg) {
 }
 
 void on_wifi_ready() {
-    xTaskCreate(udplog_send, "logsend", 256, NULL, 4, NULL);
+    xTaskCreate(udplog_send, "logsend", 256, NULL, 2, NULL);
     xTaskCreate(ota_task,"ota",4096,NULL,1,NULL);
     UDPLGP("wifiready-done\n");
 }

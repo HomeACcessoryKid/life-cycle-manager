@@ -22,7 +22,7 @@
 #include <udplogger.h>
 
 static int  verify = 1;
-static byte file_first_byte[1];
+static byte file_first_byte[]={0xff};
 ecc_key prvecckey;
 ecc_key pubecckey;
 
@@ -40,6 +40,9 @@ bool otabeta=0;
 
 void  ota_init() {
     UDPLGP("--- ota_init\n");
+
+    ip_addr_t target_ip;
+    int ret;
     
     //using beta = pre-releases?
     #ifdef OTABETA
@@ -102,6 +105,15 @@ void  ota_init() {
     }
     UDPLGP("active_sector: 0x%x\n",active_cert_sector);
     ota_set_verify(0);
+    UDPLGP("--- DNS: ");
+    vTaskDelay(200); //initial 2 seconds because else DNS could hang
+    ret = netconn_gethostbyname(HOST, &target_ip);
+    while(ret) {
+        UDPLGP("%d",ret);
+        vTaskDelay(200);
+        ret = netconn_gethostbyname(HOST, &target_ip);
+    }
+    UDPLGP("done!\n");
 }
 
 int ota_get_privkey() {
@@ -145,7 +157,8 @@ int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, 
     if (!spiflash_read(sector, (byte *)buffer, PKEYSIZE)) {
         UDPLGP("error reading flash\n");    return -1;
     }
-    if (buffer[ 0]!=0x30 || buffer[ 1]!=0x76 || buffer[ 2]!=0x30) return -2; //not a valid keyformat
+    //do not test the first byte since else the key-update routine will not be able to collect a key
+    if (buffer[ 1]!=0x76 || buffer[ 2]!=0x30 || buffer[ 3]!=0x10) return -2; //not a valid keyformat
     if (buffer[20]!=0x03 || buffer[21]!=0x62 || buffer[22]!=0x00) return -2; //not a valid keyformat
     length=97;
     
@@ -257,35 +270,30 @@ int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-re
     return result;
 }
 
+int local_port=0;
 static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     UDPLGP("--- ota_connect LocalPort=");
     int ret;
-    int delay=1;
     ip_addr_t target_ip;
     struct sockaddr_in sock_addr;
-    static int local_port=0;
-    unsigned char initial_port[4];
+    unsigned char initial_port[2];
     WC_RNG rng;
     
     if (!local_port) {
-        do {
-            wc_RNG_GenerateBlock(&rng, initial_port, 2);
-            local_port=256*initial_port[0]+initial_port[1];
-            printf("%04x,",local_port);
-        } while (local_port<LOCAL_PORT_START);
+        wc_RNG_GenerateBlock(&rng, initial_port, 2);
+        local_port=(256*initial_port[0]+initial_port[1])|0xc000;
     }
-    UDPLGP("%04x ",local_port);
+    UDPLGP("%04x DNS",local_port);
     ret = netconn_gethostbyname(host, &target_ip);
     while(ret) {
         printf("%d",ret);
-        vTaskDelay(delay);
-        delay=delay<500?delay*2:500; //exponential hold-off till 5 seconds
+        vTaskDelay(200);
         ret = netconn_gethostbyname(host, &target_ip);
     }
-    UDPLGP("IP:%d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
-                                                (unsigned char)((target_ip.addr & 0x0000ff00) >> 8),
-                                                (unsigned char)((target_ip.addr & 0x00ff0000) >> 16),
-                                                (unsigned char)((target_ip.addr & 0xff000000) >> 24));
+    UDPLGP(" IP:%d.%d.%d.%d ", (unsigned char)((target_ip.addr & 0x000000ff) >> 0),
+                              (unsigned char)((target_ip.addr & 0x0000ff00) >> 8),
+                              (unsigned char)((target_ip.addr & 0x00ff0000) >> 16),
+                              (unsigned char)((target_ip.addr & 0xff000000) >> 24));
     //printf("create socket ......");
     *socket = socket(AF_INET, SOCK_STREAM, 0);
     if (*socket < 0) {
@@ -298,7 +306,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = 0;
     sock_addr.sin_port = htons(local_port++);
-    if (local_port==65536) local_port=LOCAL_PORT_START;
+    if (local_port==0x10000) local_port=0xc000;
     ret = bind(*socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
     if (ret) {
         UDPLGP(FAILED);
