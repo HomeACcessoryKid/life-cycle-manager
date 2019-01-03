@@ -38,7 +38,7 @@ cp firmware/otaboot.bin versions1/0.9.14v/otabootbeta.bin
 - erase the flash and upload the privatekey
 ```
 esptool.py -p /dev/cu.usbserial-* --baud 230400 erase_flash 
-esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions1-privatekey.der
+esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versions1-privatekey.der
 ```
 - upload the ota-boot BETA program to the device that contains the private key
 ```
@@ -64,7 +64,7 @@ xxd versions1/0.9.14v/otamain.bin.sig
 - make the release a production release on github  
 - remove the private key  
 ```
-esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions1/blank.bin
+esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versions1/blank.bin
 ```
 
 
@@ -96,9 +96,9 @@ xxd -p secp384r1pub.der
 ```
 vi versions1/certs.hex; xxd -p -r versions1/certs.hex > versions1/certs.sector
 ```
-- start a new release as described above, but in the first run, use the previous private key in 0xf5000
+- start a new release as described above, but in the first run, use the previous private key in 0xf9000
 ```
-esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versionsN-1-privatekey.der
+esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versionsN-1-privatekey.der
 ```
 - collect public-1.key.sig and store it in the new version folder and copy it to versions1
 ```
@@ -106,7 +106,7 @@ cp  versions1/0.9.14v/public-1.key.sig versions1
 ```
 - then flash the new private key
 ```
-esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf5000 versions1-privatekey.der
+esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versions1-privatekey.der
 ```
 - collect cert.sector.sig and store it in the new version folder and copy it to versions1 
 ```

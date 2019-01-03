@@ -66,6 +66,9 @@ ifdef OTABETA
 EXTRA_CFLAGS += -DOTABETA
 endif
 
+EXTRA_CFLAGS += -DDEFAULT_SYSPARAM_SECTORS=0
+
+
 include $(SDK_PATH)/common.mk
 
 monitor:
