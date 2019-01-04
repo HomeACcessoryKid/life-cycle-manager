@@ -193,6 +193,8 @@ void user_init(void) {
 //    uart_set_baud(0, 74880);
     uart_set_baud(0, 115200);
 
+    ota_new_layout();
+        
     wifi_config_init("LCM", NULL, on_wifi_ready); //expanded it with setting repo-details
     UDPLGP("user-init-done\n");
 }

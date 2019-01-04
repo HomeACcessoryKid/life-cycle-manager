@@ -38,6 +38,22 @@ void MyLoggingCallback(const int logLevel, const char* const logMessage) {
 bool userbeta=0;
 bool otabeta=0;
 
+
+void  ota_new_layout() {
+    sysparam_status_t status;
+
+    status = sysparam_init(SYSPARAMSECTOR, 0);
+    if (status == SYSPARAM_NOTFOUND) {
+        status = sysparam_create_area(SYSPARAMSECTOR, 2, false);
+        if (status == SYSPARAM_OK) {
+            status = sysparam_init(SYSPARAMSECTOR, 0);
+        }
+    }
+    if (status != SYSPARAM_OK) {
+        printf("WARNING: Could not initialize sysparams (%d)!\n", status);
+    }
+}
+
 void  ota_init() {
     UDPLGP("--- ota_init\n");
 

@@ -14,8 +14,9 @@
 #define HOLDOFF_MAX 604800      //more like 604800 (1 week)
 
 #define SECTORSIZE 4096
-#define HIGHERCERTSECTOR 0xF6000
-#define LOWERCERTSECTOR 0xF5000
+#define HIGHERCERTSECTOR 0xFA000
+#define LOWERCERTSECTOR 0xF9000
+#define SYSPARAMSECTOR 0xF7000
 #define BOOT0SECTOR 0x02000
 #define BOOT1SECTOR 0x8D000 //must match the program1.ld value!!
 #define HOST "github.com"
@@ -46,6 +47,8 @@ typedef struct {
 
 int active_cert_sector;
 int backup_cert_sector;
+
+void  ota_new_layout();
 
 void  ota_init();
 
