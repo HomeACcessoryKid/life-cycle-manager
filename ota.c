@@ -442,6 +442,7 @@ char* ota_get_version(char * repo) {
     char* version=NULL;
     char prerelease[64]; 
     int retc, ret=0;
+    int httpcode;
     WOLFSSL*     ssl;
     int socket;
     //host=begin(repo);
@@ -468,6 +469,18 @@ char* ota_get_version(char * repo) {
             if (ret > 0) {
                 recv_buf[ret]=0; //error checking
                 //printf("%s\n",recv_buf);
+
+                location=strstr(recv_buf,"HTTP/1.1 ");
+                strchr(location,' ')[0]=0;
+                location+=9; //flush "HTTP/1.1 "
+                httpcode=atoi(location);
+                UDPLGP("HTTP returns %d for ",httpcode);
+                if (httpcode!=302) {
+                    wolfSSL_free(ssl);
+                    lwip_close(socket);
+                    return "404";
+                }
+                recv_buf[strlen(recv_buf)]=' '; //for further headers
 
                 location=strstr(recv_buf,"Location: ");
                 strchr(location,'\r')[0]=0;

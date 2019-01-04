@@ -59,8 +59,14 @@ void ota_task(void *arg) {
 
     if (ota_boot()) ota_write_status("0.0.0");  //we will have to get user code from scratch if running ota_boot
     if ( !ota_load_user_app(&user_repo, &user_version, &user_file)) { //repo/version/file must be configured
-        //new_version=ota_get_version(user_repo); //consider that if here version is equal, we end it already
-        //if (!ota_compare(new_version,user_version)) { //allows a denial of update so not doing it for now
+        if (ota_boot()) {
+            new_version=ota_get_version(user_repo); //check if this repository exists at all
+            if (!strcmp(new_version,"404")) {
+                UDPLGP("%s so it does not exist! HALTED FOR EVER!\n",user_repo);
+                vTaskDelete(NULL);
+            }
+        }
+        
         for (;;) { //escape from this loop by continue (try again) or break (boots into slot 0)
             UDPLGP("--- entering the loop\n");
             //UDPLGP("%d\n",sdk_system_get_time()/1000);
