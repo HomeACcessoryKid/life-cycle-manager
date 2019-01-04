@@ -12,8 +12,8 @@ cd life-cycle-manager
 #### These are the steps if not introducing a new key pair
 - create/update the file versions1/latest-pre-release without new-line and setup 0.9.15 version folder
 ```
-echo -n 0.9.15 > versions1/0.9.15v/latest-pre-release
 mkdir versions1/0.9.15v
+echo -n 0.9.15 > versions1/0.9.15v/latest-pre-release
 cp versions1/certs.sector* versions1/0.9.15v
 cp versions1/public*key*   versions1/0.9.15v
 ```
