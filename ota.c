@@ -62,10 +62,10 @@ void  ota_init() {
     
     //using beta = pre-releases?
     #ifdef OTABETA
-    sysparam_set_bool("ota_self-use_pre-release", 1);
+    sysparam_set_bool("lcm_beta", 1);
     #endif
-    sysparam_get_bool("ota_self-use_pre-release", &otabeta);
-    sysparam_get_bool("ota_use_pre-release", &userbeta);
+    sysparam_get_bool("lcm_beta", &otabeta);
+    sysparam_get_bool("ota_beta", &userbeta);
     
     UDPLGP("userbeta=\'%d\' otabeta=\'%d\'\n",userbeta,otabeta);
     
