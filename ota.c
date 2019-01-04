@@ -122,7 +122,6 @@ void  ota_init() {
     UDPLGP("active_sector: 0x%x\n",active_cert_sector);
     ota_set_verify(0);
     UDPLGP("--- DNS: ");
-    vTaskDelay(200); //initial 2 seconds because else DNS could hang
     ret = netconn_gethostbyname(HOST, &target_ip);
     while(ret) {
         UDPLGP("%d",ret);
