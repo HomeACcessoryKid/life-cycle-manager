@@ -1,18 +1,13 @@
-# life-cycle-manager (LCM)
+# Life-Cycle-Manager (LCM)
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
-(c) 2018 HomeAccessoryKid
+(c) 2018-2019 HomeAccessoryKid
 
-this readme is still under construction...  
-#### Update Mid December 2018
-The development area is now here, at LCM repository.
-Be aware that this area could show instability while testing alpha and beta versions!!  
-DO NOT CONSIDER ANY CODE WITH A RELEASE NUMBER BELOW 1.0.0 OF ANY USE  
-unless you are able to re-flash your device if things go wrong.
-Having said that, by having introduced the latest-pre-release concept, users (and LCM itself) can test new software before exposing it to production devices.
+## Version
+LCM has arrived at a stable version with plenty of testing and a strategy how to go forward.
+By having introduced the latest-pre-release concept, users (and LCM itself) can test new software before exposing it to production devices.
 See the 'How to use it' section.
 
-Meanwhile, at https://github.com/HomeACcessoryKid/ota version 0.1.0 is the version that serves for early starters.  
-This software, while having its issues is stable in itself. The idea is that once LCM reaches 1.0.0 there will be a OTA 1.0.0 as well which will switch over the OTA engine to LCM.
+Meanwhile, at https://github.com/HomeACcessoryKid/ota version 0.3.0 is the version that will transfer a 0.1.0 release used by early starters whenever they trigger an update.
 
 https://github.com/HomeACcessoryKid/ota-demo has been upgraded to offer system-parameter editing features which allows for flexible testing of the LCM code.
 
@@ -89,7 +84,74 @@ User device setup part
 - you can follow progress on the serial port or use the UDPlogger using the command 'nc -kulnw0 45678'
 
 ## How it works
-todo
+This is a bit outdated design from beginning of 2018, but it still serves to read through the code base.
+
+![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v1.png)
+
+### Concepts
+```
+Main app(0)
+v.x
+```
+The usercode Main app is running in bootslot 0 at version x
+
+```
+boot=slot1
+baseURL=repo
+version=x
+```
+This represents that in sector1 used by rboot, we will also store the following info
+- baseURL: everything is intended to be relative to https://github.com, so this info is the user/repo part
+- version: the version that this repo is currently running at
+
+After this we run the OTA code which will try to deposit in boot slot 0 the latest version of the baseURL repo.
+
+```
+t
+```
+This represents an exponential hold-off to prevent excesive hammering on the github servers. It resets at a power-cycle.
+
+```
+download certificate signature
+certificate update?
+Download Certificates
+```
+This is a file that contains the checksum of the sector containing three certificates/keys
+- public key of HomeACessoryKid that signs the certificate/key sector 
+- root CA used by GitHub
+- root CA used by the DistributedContentProvider (Amazon for now)
+
+First, the file is intended to be downloaded with server certificate verification activated. If this fails, it is downloaded anyway without verification and server is marked as invalid. Once downloaded, the sha256 checksum of the active sector is compared to the checksum in the signature file. If equal, we move on. If not, we download the updated sector file to the standby sector.
+
+```
+signature match?
+```
+From the sector containing up to date certificates the sha256 hash is signed by the private key of HomeACessoryKid.
+Using the available public key, the validity is verified
+
+```
+server valid?
+```
+If in the previous steps the server is marked invalid, we return to the main app in boot slot 0 and we report by syslog to a server (to be determinded) so we learn that github has changed its certificate CA provider and HomeACessoryKid can issue a new certificate sector.
+
+```
+new OTA version?
+self-updater(0) update OTAapp➔1
+checksum OK?
+```
+Now that the downloading from GitHub has been secured, we can trust whatever we download based on a checksum.
+We verify if there is an update of this OTA repo itself? If so, we use a self-updater (part of this repo) to 'self update'. After this we have the latest OTA code.
+
+```
+OTA app(1) updates Main app➔0
+checksum OK?
+```
+Using the baseURL info and the version as stored in sector1, the latest binary is found and downloaded if needed. If the checksum does not work out, we return to the OTA app start point considering we cannot run the old code anymore.
+But normally we boot the new code and the mission is done.
+
+Note that switching from boot=slot1 to boot=slot0 does not require a reflash
+
+
 
 ## Creating a user app DigitalSignature
 from the directory where `make` is run execute:
@@ -97,3 +159,9 @@ from the directory where `make` is run execute:
 openssl sha384 -binary -out firmware/main.bin.sig firmware/main.bin
 printf "%08x" `cat firmware/main.bin | wc -c`| xxd -r -p >>firmware/main.bin.sig
 ```
+
+## AS-IS disclaimer and License
+While I pride myself to make this software error free and backward compatible and otherwise perfect, this is the 
+result of a hobby etc. etc. etc.
+
+See the LICENSE file for license information

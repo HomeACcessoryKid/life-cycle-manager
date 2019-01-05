@@ -1,4 +1,4 @@
-// (c) 2018 HomeAccessoryKid
+// (c) 2018-2019 HomeAccessoryKid
 
 #include <stdio.h>
 #include <espressif/esp_wifi.h>

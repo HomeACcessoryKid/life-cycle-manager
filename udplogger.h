@@ -1,4 +1,4 @@
-// (c) 2018 HomeAccessoryKid
+// (c) 2018-2019 HomeAccessoryKid
 #ifndef __UDPLOGGER_H__
 #define __UDPLOGGER_H__
 

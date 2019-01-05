@@ -1,4 +1,4 @@
-/*  (c) 2018 HomeAccessoryKid */
+/*  (c) 2018-2019 HomeAccessoryKid */
 #ifndef __OTA_H__
 #define __OTA_H__
 
