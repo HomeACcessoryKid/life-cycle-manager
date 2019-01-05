@@ -77,14 +77,22 @@ User device setup part
 0x2000 versions/x.y.zv/otaboot.bin
 ```
 - (or otabootbeta.bin if enrolling in the LCM pre-release testing)
-- start the code and wait till the Wifi AP starts.  
+- start the code and either use serial input menu or wait till the Wifi AP starts.  
 - set the repository you want to use in your device. yourname/repository  and name of binary
 - then select your Wifi AP and insert your password
-- once selected, it will take up to 5 minutes for the system to upload the ota-main software in the second bootsector and the user code in the 1st boot sector
-- you can follow progress on the serial port or use the UDPlogger using the command 'nc -kulnw0 45678'
+- once selected, it will take up to 5 minutes for the system to download the ota-main software in the second bootsector and the user code in the 1st boot sector
+- you can follow progress on the serial port or use the UDPlogger using the terminal command 'nc -kulnw0 45678'
+
+## Creating a user app DigitalSignature
+from the directory where `make` is run execute:
+```
+openssl sha384 -binary -out firmware/main.bin.sig firmware/main.bin
+printf "%08x" `cat firmware/main.bin | wc -c`| xxd -r -p >>firmware/main.bin.sig
+```
 
 ## How it works
 This is a bit outdated design from beginning of 2018, but it still serves to read through the code base.
+The actual entry point of the process is the self-updater which is called ota-boot and which is flashed by serial cable.
 
 ![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v1.png)
 
@@ -152,13 +160,6 @@ But normally we boot the new code and the mission is done.
 Note that switching from boot=slot1 to boot=slot0 does not require a reflash
 
 
-
-## Creating a user app DigitalSignature
-from the directory where `make` is run execute:
-```
-openssl sha384 -binary -out firmware/main.bin.sig firmware/main.bin
-printf "%08x" `cat firmware/main.bin | wc -c`| xxd -r -p >>firmware/main.bin.sig
-```
 
 ## AS-IS disclaimer and License
 While I pride myself to make this software error free and backward compatible and otherwise perfect, this is the 
