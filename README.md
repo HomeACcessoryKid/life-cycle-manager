@@ -53,6 +53,10 @@ But since the code of LCM is public, by audit it is unlikely that malicious even
 
 ## How to use it
 User preparation part  
+- in an appropriate part of your code, add these two function calls which will trigger an update:
+- ```rboot_set_temp_rom(1); //select the OTA main routine```
+- ```sdk_system_restart();  //#include <rboot-api.h>```
+- there is a bug in the esp SDK such that if you do not power cycle the chip after flashing, restart is unreliable
 - compile your own code and create a signature (see below)
 - in the shell, `echo -n x.y.z > latest-pre-release`
 - commit this to Git and sync it with GitHub
