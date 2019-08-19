@@ -1,7 +1,17 @@
 ### This assumes you are using Maxim Kulkin's esp-homekit library for HomeKit support
 
 - First, add the files ota-api.c and ota-api.h next to your main.c file
-
+- next add extras/rboot-ota to the Makefile
+```
+EXTRA_COMPONENTS = \
+    extras/http-parser \
+    extras/dhcpserver \
+    extras/rboot-ota \
+    $(abspath esp-wolfssl) \
+    $(abspath esp-cjson) \
+    $(abspath esp-homekit) \
+    $(abspath esp-wifi-config)
+```
 - inside main.c  you should start with adding this section soon after #include section
 ```
 // add this section to make your device OTA capable
@@ -22,10 +32,9 @@ homekit_characteristic_t revision     = HOMEKIT_CHARACTERISTIC_(FIRMWARE_REVISIO
 //    config.accessories[0]->config_number=c_hash;
 // end of OTA add-in instructions
 ```
-### so this could end up like this for example:
+###  for example it could end up like this:
 
-!! Be aware that if in the future you change the id's of the characteristics (not only ota_trigger) your device might be
-rejected by Apple and it has proven impossible safe re-flash and re-pair to get the device back into action!!
+##### !! Be aware that if in the future you change the id's of the characteristics (not only ota_trigger) your device might be rejected by the iPhone and it has proven impossible safe re-flash and re-pair to get the device back into action!! So, if after this you decide to add even more, add it behind what you already had.
 
 ```
 homekit_accessory_t *accessories[] = {
@@ -64,7 +73,7 @@ void on_wifi_ready() {
     
     int c_hash=ota_read_sysparam(&manufacturer.value.string_value,&serial.value.string_value,
                                       &model.value.string_value,&revision.value.string_value);
-    //c_hash=3; revision.value.string_value="0.0.1"; //cheat line
+    //c_hash=1; revision.value.string_value="0.0.1"; //cheat line
     config.accessories[0]->config_number=c_hash;
     
     homekit_server_init(&config);
