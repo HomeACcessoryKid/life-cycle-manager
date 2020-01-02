@@ -62,7 +62,7 @@ User preparation part
 - commit this to Git and sync it with GitHub
 - Start a release from this commit and take care the version is in x.y.z format
 - Attach/Upload the binary and the signature and create the release _as a pre-release_ **)
-- Now go to the current 'latest release', ie the non-pre-release one you’re about to improve upon, edit its list of assets and either add or remove and replace the `latest-pre-release` file so that it will now point to the pre-release we created above  
+- Now go to the current 'latest release', ie the non-pre-release one you’re about to improve upon, edit its list of assets and either add or remove and replace the `latest-pre-release` file so that we now have a pointer to the pre-release we created above  
 **) except the very first time, you must set it as latest release 
 
 Now test your new code by using a device that you enroll to the pre-release versions (a checkbox in the wifi-setup page).
