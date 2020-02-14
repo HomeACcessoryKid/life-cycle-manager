@@ -1,4 +1,4 @@
-/*  (c) 2018-2019 HomeAccessoryKid */
+/*  (c) 2018-2020 HomeAccessoryKid */
 #ifndef __OTA_H__
 #define __OTA_H__
 
@@ -6,7 +6,9 @@
  #error You must set OTAVERSION=x.y.z of the ota code to match github version tag x.y.z
 #endif
 #define OTAREPO  "HomeACcessoryKid/life-cycle-manager"
-#define LCMREPO  "HomeACcessoryKid/life-cycle-manager"
+//#define LCMREPO  "HomeACcessoryKid/life-cycle-manager"
+#define BTLREPO  "HomeACcessoryKid/rboot4lcm"
+#define BTLFILE "rboot.bin"
 #define MAINFILE "otamain.bin"
 #define BOOTFILE "otaboot.bin"
 #define CERTFILE "certs.sector"
@@ -48,7 +50,7 @@ typedef struct {
 int active_cert_sector;
 int backup_cert_sector;
 
-void  ota_new_layout();
+void  ota_read_rtc();
 
 void  ota_init();
 
@@ -65,6 +67,10 @@ int   ota_compare(char* newv, char* oldv);
 int   ota_load_user_app(char * *repo, char * *version, char * *file);
 
 void  ota_set_verify(int onoff);
+
+void  ota_copy_bootloader(int sector, int size, char * version);
+
+char* ota_get_btl_version();
 
 char* ota_get_version(char * repo);
 

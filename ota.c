@@ -1,8 +1,9 @@
-/*  (c) 2018-2019 HomeAccessoryKid */
+/*  (c) 2018-2020 HomeAccessoryKid */
 #include <stdlib.h>  //for UDPLGP
 #include <stdio.h>
 #include <string.h>
 
+#include <espressif/esp_common.h>
 #include <lwip/sockets.h>
 #include <lwip/api.h>
 #include <esp8266.h>
@@ -39,35 +40,93 @@ bool userbeta=0;
 bool otabeta=0;
 
 
-void  ota_new_layout() {
+void  ota_read_rtc() {
+    UDPLGP("--- ota_read_rtc\n");
+	int sector,count=0;
+	int count_step=3;
     sysparam_status_t status;
+    char *value;
+    bool reset_wifi=0;
+	rboot_rtc_data rtc;
 
     status = sysparam_init(SYSPARAMSECTOR, 0);
-    if (status == SYSPARAM_NOTFOUND) {
-        status = sysparam_create_area(SYSPARAMSECTOR, 2, false);
+    if (status == SYSPARAM_OK) {
+        status = sysparam_get_string("ota_count_step", &value);
+        if (status == SYSPARAM_OK) {
+            if (*value<0x34 && *value>0x30 && strlen(value)==1) count_step=*value-0x30;
+            free(value);
+        }
+    }
+    UDPLGP("--- count_step=%d\n",count_step);
+    
+	if (rboot_get_rtc_data(&rtc)) count=rtc.temp_rom;
+    
+    UDPLGP("--- count=%d\n",count);
+    if      (count<5+count_step*1) { //standard ota-main or ota-boot behavior
+            UDPLGP("--- standard ota\n");
+    }
+    else if (count<5+count_step*2) { //reset wifi parameters
+            UDPLGP("--- reset wifi\n");
+            reset_wifi=1;
+    }
+    else    {//factory reset
+            UDPLGP("--- factory reset\n");
+            spiflash_erase_sector(SYSPARAMSECTOR);    spiflash_erase_sector(SYSPARAMSECTOR+SECTORSIZE);//sysparam reset
+            for (sector=0xfb000; sector<   0x100000; sector+=SECTORSIZE) spiflash_erase_sector(sector);//Espressif area
+            #ifndef OTABOOT    
+             for(sector= 0x2000; sector<BOOT1SECTOR; sector+=SECTORSIZE) spiflash_erase_sector(sector);//user space
+            #endif
+    }
+    if      (count>=5+count_step*3) { //factory reset and otabeta
+            UDPLGP("--- set otabeta\n");
+            otabeta=1;
+    }
+
+    uint32_t base_addr;
+    uint32_t num_sectors;  
+
+    status = sysparam_init(SYSPARAMSECTOR, 0);
+    if (status != SYSPARAM_OK) {
+        status = sysparam_create_area(SYSPARAMSECTOR, 2, true);
         if (status == SYSPARAM_OK) {
             status = sysparam_init(SYSPARAMSECTOR, 0);
         }
+    } else {
+        sysparam_get_info(&base_addr, &num_sectors);
+        if (num_sectors!=2) {
+            status = sysparam_create_area(SYSPARAMSECTOR, 2, true);
+            if (status == SYSPARAM_OK) {
+                status = sysparam_init(SYSPARAMSECTOR, 0);
+            }
+        }
     }
     if (status != SYSPARAM_OK) {
-        printf("WARNING: Could not initialize sysparams (%d)!\n", status);
+        printf("WARNING: LCM/OTA could not initialize sysparams (%d)!\n", status);
     }
+    if (reset_wifi) {
+        sysparam_set_string("wifi_ssid","");
+        sysparam_set_string("wifi_password","");
+        sysparam_compact(); //to make a copy without the ssid/password (does not erase old region)
+        sysparam_compact(); //to make sure the information really gets wiped
+        struct sdk_station_config sta_config; //remove esp wifi client settings
+        memset(&sta_config, 0, sizeof(sta_config));
+        sdk_wifi_station_set_config(&sta_config); //This wipes out the info in sectors 0xfd000+
+    }
+    #ifdef OTABETA
+    otabeta=1; //using beta = pre-releases?
+    #endif
+    if (otabeta) sysparam_set_bool("lcm_beta", 1);
 }
 
 void  ota_init() {
     UDPLGP("--- ota_init\n");
 
-    ip_addr_t target_ip;
-    int ret;
-    
-    //using beta = pre-releases?
-    #ifdef OTABETA
-    sysparam_set_bool("lcm_beta", 1);
-    #endif
     sysparam_get_bool("lcm_beta", &otabeta);
     sysparam_get_bool("ota_beta", &userbeta);
-    
     UDPLGP("userbeta=\'%d\' otabeta=\'%d\'\n",userbeta,otabeta);
+
+    ip_addr_t target_ip;
+    int ret;
     
     //rboot setup
     rboot_config conf;
@@ -131,6 +190,7 @@ void  ota_init() {
     UDPLGP("done!\n");
 }
 
+#ifdef OTABOOT    
 int ota_get_privkey() {
     UDPLGP("--- ota_get_privkey\n");
     
@@ -161,6 +221,7 @@ int ota_get_privkey() {
     */
     return ret;
 }
+#endif
 
 int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, report filesize
     UDPLGP("--- ota_get_pubkey\n");
@@ -186,6 +247,7 @@ int ota_get_pubkey(int sector) { //get the ecdsa key from the indicated sector, 
     if (!ret)return PKEYSIZE; else return ret;
 }
 
+#ifdef OTABOOT    
 int ota_verify_pubkey(void) { //check if public and private key are a pair
     UDPLGP("--- ota_verify_pubkey\n");
     
@@ -205,6 +267,7 @@ int ota_verify_pubkey(void) { //check if public and private key are a pair
         
     return answer-1;
 }
+#endif
 
 void ota_hash(int start_sector, int filesize, byte * hash, byte first_byte) {
     UDPLGP("--- ota_hash\n");
@@ -233,6 +296,7 @@ void ota_hash(int start_sector, int filesize, byte * hash, byte first_byte) {
     wc_Sha384Final(&sha, hash);
 }
 
+#ifdef OTABOOT    
 void ota_sign(int start_sector, int filesize, signature_t* signature, char* file) {
     UDPLGP("--- ota_sign\n");
     
@@ -246,6 +310,7 @@ void ota_sign(int start_sector, int filesize, signature_t* signature, char* file
     printf("echo "); for (i=0;i<siglen  ;i++) printf("%02x ",signature->sign[i]); printf(">>x.hex\n");
     printf("xxd -r -p x.hex > %s.sig\n",file);  printf("rm x.hex\n");
 }
+#endif
 
 int ota_compare(char* newv, char* oldv) { //(if equal,0) (if newer,1) (if pre-release or older,-1)
     UDPLGP("--- ota_compare ");
@@ -381,7 +446,10 @@ int   ota_load_user_app(char * *repo, char * *version, char * *file) {
     status = sysparam_get_string("ota_version", &value);
     if (status == SYSPARAM_OK) {
         *version=value;
-    } else return -1;
+    } else {
+        *version=malloc(6); //TODO check if this is valid coding
+        strcpy(*version,"0.0.0");
+    }
     status = sysparam_get_string("ota_file", &value);
     if (status == SYSPARAM_OK) {
         *file=value;
@@ -435,6 +503,40 @@ void  ota_set_verify(int onoff) {
     }
 }
 
+void  ota_copy_bootloader(int sector, int size, char * version) {
+    UDPLGP("--- ota_copy_bootloader\n");
+    byte buffer[SECTORSIZE];
+    char versionbuff[MAXVERSIONLEN];
+    
+    memset(versionbuff,0xff,MAXVERSIONLEN);
+    strcpy(versionbuff,version);
+    spiflash_read(sector, buffer, size);
+    spiflash_erase_sector(0);
+    spiflash_write(0, buffer, size);
+    //version is stored as a string in last MAXVERSIONLEN bytes of sector
+    spiflash_write(SECTORSIZE-MAXVERSIONLEN, (byte *)versionbuff, MAXVERSIONLEN);
+    //set last uint32 to zero of the config sector so rboot will reflash it
+    memset(versionbuff,0,4);
+    spiflash_write(2*SECTORSIZE-4, (byte *)versionbuff, 4);
+}
+
+char* ota_get_btl_version() {
+    UDPLGP("--- ota_get_btl_version\n");
+    char versionbuff[MAXVERSIONLEN];
+    char* version=NULL;
+    
+    spiflash_read(SECTORSIZE-MAXVERSIONLEN, (byte *)versionbuff, MAXVERSIONLEN);
+    if (versionbuff[0]!=0xff) { //TODO: make this more error resistant
+        version=malloc(strlen(versionbuff));
+        strcpy(version,versionbuff);
+    } else {
+        version=malloc(6);
+        strcpy(version,"0.0.0");
+    }
+    UDPLGP("bootloader version:\"%s\"\n",version);
+    return version;
+}
+
 int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte * buffer, int bufsz); //prototype needed
 char* ota_get_version(char * repo) {
     UDPLGP("--- ota_get_version\n");
@@ -486,6 +588,7 @@ char* ota_get_version(char * repo) {
                 strchr(location,'\r')[0]=0;
                 //printf("%s\n",location);
                 location=strstr(location,"tag/");
+                if (location[4]=='v' || location[4]=='V') location++;
                 version=malloc(strlen(location+4));
                 strcpy(version,location+4);
                 printf("%s@version:\"%s\" according to latest release\n",repo,version);
@@ -514,8 +617,10 @@ char* ota_get_version(char * repo) {
 //     if (retc) return retc;
 //     if (ret <= 0) return ret;
 
+    //TODO: maybe add more error return messages... like version "99999.99.99"
     //find latest-pre-release if joined beta program
-    if ( (userbeta && strcmp(OTAREPO,repo)) || (otabeta && !strcmp(OTAREPO,repo)) ) {
+    bool OTAorBTL=!(strcmp(OTAREPO,repo)&&strcmp(BTLREPO,repo));
+    if ( (userbeta && !OTAorBTL) || (otabeta && OTAorBTL)) {
         prerelease[63]=0;
         ret=ota_get_file_ex(repo,version,"latest-pre-release",0,(byte *)prerelease,63);
         if (ret>0) {

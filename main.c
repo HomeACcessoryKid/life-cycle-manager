@@ -1,4 +1,4 @@
-/* (c) 2018-2019 HomeAccessoryKid
+/* (c) 2018-2020 HomeAccessoryKid
  * LifeCycleManager dual app
  * use local.mk to turn it into the LCM otamain.bin app or the otaboot.bin app
  */
@@ -24,12 +24,17 @@ void ota_task(void *arg) {
     char* user_file=NULL;
     char*  new_version=NULL;
     char*  ota_version=NULL;
-    char*  lcm_version=NULL;
+//    char*  lcm_version=NULL;
+#ifndef OTABOOT    
+    char*  btl_version=NULL;
+#endif
     signature_t signature;
     extern int active_cert_sector;
     extern int backup_cert_sector;
     int file_size; //32bit
+#ifdef OTABOOT    
     int have_private_key=0;
+#endif
     int keyid,foundkey=0;
     char keyname[KEYNAMELEN];
     
@@ -48,6 +53,7 @@ void ota_task(void *arg) {
     UDPLGP("active_cert_sector: 0x%05x\n",active_cert_sector);
     file_size=ota_get_pubkey(active_cert_sector);
     
+#ifdef OTABOOT    
     if (!ota_get_privkey()) { //have private key
         have_private_key=1;
         UDPLGP("have private key\n");
@@ -56,16 +62,20 @@ void ota_task(void *arg) {
             vTaskDelete(NULL); //upload the signature out of band to github and flash the new private key to backupsector
         }
     }
-
+#else
+    btl_version=ota_get_btl_version();
+#endif
     if (ota_boot()) ota_write_status("0.0.0");  //we will have to get user code from scratch if running ota_boot
-    if ( !ota_load_user_app(&user_repo, &user_version, &user_file)) { //repo/version/file must be configured
+    if ( !ota_load_user_app(&user_repo, &user_version, &user_file)) { //repo/file must be configured
+#ifdef OTABOOT    
         if (ota_boot()) {
             new_version=ota_get_version(user_repo); //check if this repository exists at all
             if (!strcmp(new_version,"404")) {
-                UDPLGP("%s so it does not exist! HALTED FOR EVER!\n",user_repo);
+                UDPLGP("%s does not exist! HALTED TILL NEXT POWERCYCLE!\n",user_repo);
                 vTaskDelete(NULL);
             }
         }
+#endif
         
         for (;;) { //escape from this loop by continue (try again) or break (boots into slot 0)
             UDPLGP("--- entering the loop\n");
@@ -79,16 +89,17 @@ void ota_task(void *arg) {
             ota_get_pubkey(active_cert_sector); //in case the LCM update is in a cycle
             
             ota_set_verify(0); //should work even without certificates
-            if (lcm_version) free(lcm_version);
+            //if (lcm_version) free(lcm_version);
             if (ota_version) free(ota_version);
             ota_version=ota_get_version(OTAREPO);
             if (ota_get_hash(OTAREPO, ota_version, CERTFILE, &signature)) { //no certs.sector.sig exists yet on server
+#ifdef OTABOOT    
                 if (have_private_key) {
                     ota_sign(active_cert_sector,SECTORSIZE, &signature, CERTFILE); //reports to console
                     vTaskDelete(NULL); //upload the signature out of band to github and start again
-                } else {
+                } else
+#endif
                     continue; //loop and try again later
-                }
             }
             if (ota_verify_hash(active_cert_sector,&signature)) { //seems we need to download certificates
                 if (ota_verify_signature(&signature)) { //maybe an update on the public key
@@ -122,6 +133,7 @@ void ota_task(void *arg) {
                 break; //leads to boot=0
             }
             if (ota_boot()) { //running the ota-boot software now
+#ifdef OTABOOT    
                 //take care our boot code gets a signature by loading it in boot1sector just for this purpose
                 if (ota_get_hash(OTAREPO, ota_version, BOOTFILE, &signature)) { //no signature yet
                     if (have_private_key) {
@@ -133,11 +145,11 @@ void ota_task(void *arg) {
                     }
                 }
                 //switching over to a new repository, called LCM life-cycle-manager
-                lcm_version=ota_get_version(LCMREPO);
+                //lcm_version=ota_get_version(LCMREPO);
                 //now get the latest ota main software in boot sector 1
-                if (ota_get_hash(LCMREPO, lcm_version, MAINFILE, &signature)) { //no signature yet
+                if (ota_get_hash(OTAREPO, ota_version, MAINFILE, &signature)) { //no signature yet
                     if (have_private_key) {
-                        file_size=ota_get_file(LCMREPO,lcm_version,MAINFILE,BOOT1SECTOR);
+                        file_size=ota_get_file(OTAREPO,ota_version,MAINFILE,BOOT1SECTOR);
                         if (file_size<=0) continue; //try again later
                         ota_finalize_file(BOOT1SECTOR);
                         ota_sign(BOOT1SECTOR,file_size, &signature, MAINFILE); //reports to console
@@ -147,7 +159,7 @@ void ota_task(void *arg) {
                     }
                 } else { //we have a signature, maybe also the main file?
                     if (ota_verify_hash(BOOT1SECTOR,&signature)) { //not yet downloaded
-                        file_size=ota_get_file(LCMREPO,lcm_version,MAINFILE,BOOT1SECTOR);
+                        file_size=ota_get_file(OTAREPO,ota_version,MAINFILE,BOOT1SECTOR);
                         if (file_size<=0) continue; //try again later
                         if (ota_verify_hash(BOOT1SECTOR,&signature)) continue; //download failed
                         ota_finalize_file(BOOT1SECTOR);
@@ -158,8 +170,25 @@ void ota_task(void *arg) {
                 //ota_get_pubkey(backup_cert_sector);
                 if (ota_verify_signature(&signature)) continue; //this should never happen
                 ota_temp_boot(); //launches the ota software in bootsector 1
+#endif
             } else {  //running ota-main software now
+#ifndef OTABOOT    
                 UDPLGP("--- running ota-main software\n");
+                //is there a newer version of the bootloader...
+                if (new_version) free(new_version);
+                new_version=ota_get_version(BTLREPO);
+                if (strcmp(new_version,"404")) {
+                    if (ota_compare(new_version,btl_version)>0) { //can only upgrade
+                        UDPLGP("BTLREPO=\'%s\' new_version=\'%s\' BTLFILE=\'%s\'\n",BTLREPO,new_version,BTLFILE);
+                        if (!ota_get_hash(BTLREPO, new_version, BTLFILE, &signature)) {
+                            file_size=ota_get_file(BTLREPO,new_version,BTLFILE,backup_cert_sector);
+                            if (file_size>0 && !ota_verify_hash(backup_cert_sector,&signature)) {
+                                ota_finalize_file(backup_cert_sector);
+                                ota_copy_bootloader(backup_cert_sector, file_size, new_version); //transfer it to sector zero
+                            }
+                        } //else maybe next time more luck for the bootloader
+                    } //no bootloader update 
+                }
                 //if there is a newer version of ota-main...
                 if (ota_compare(ota_version,OTAVERSION)>0) { //set OTAVERSION when running make and match with github
                     ota_get_hash(OTAREPO, ota_version, BOOTFILE, &signature);
@@ -174,13 +203,15 @@ void ota_task(void *arg) {
                 new_version=ota_get_version(user_repo);
                 if (ota_compare(new_version,user_version)>0) { //can only upgrade
                     UDPLGP("user_repo=\'%s\' new_version=\'%s\' user_file=\'%s\'\n",user_repo,new_version,user_file);
-                    ota_get_hash(user_repo, new_version, user_file, &signature);
-                    file_size=ota_get_file(user_repo,new_version,user_file,BOOT0SECTOR);
-                    if (file_size<=0 || ota_verify_hash(BOOT0SECTOR,&signature)) continue; //something went wrong, but now boot0 is broken so start over
-                    ota_finalize_file(BOOT0SECTOR); //TODO return status and if wrong, continue
-                    ota_write_status(new_version); //we have been successful, hurray!
+                    if (!ota_get_hash(user_repo, new_version, user_file, &signature)) {
+                        file_size=ota_get_file(user_repo,new_version,user_file,BOOT0SECTOR);
+                        if (file_size<=0 || ota_verify_hash(BOOT0SECTOR,&signature)) continue; //something went wrong, but now boot0 is broken so start over
+                        ota_finalize_file(BOOT0SECTOR); //TODO return status and if wrong, continue
+                        ota_write_status(new_version); //we have been successful, hurray!
+                    }
                 } //nothing to update
                 break; //leads to boot=0 and starts updated user app
+#endif
             }
         }
     }
@@ -199,7 +230,7 @@ void user_init(void) {
 //    uart_set_baud(0, 74880);
     uart_set_baud(0, 115200);
 
-    ota_new_layout();
+    ota_read_rtc(); //read RTC outcome from rboot4lcm and act accordingly
         
     wifi_config_init("LCM", NULL, on_wifi_ready); //expanded it with setting repo-details
     UDPLGP("user-init-done\n");

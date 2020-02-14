@@ -1,9 +1,10 @@
 # Life-Cycle-Manager (LCM)
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
-(c) 2018-2019 HomeAccessoryKid
+(c) 2018-2020 HomeAccessoryKid
 
 ## Version
-LCM has arrived at a stable version with plenty of testing and a strategy how to go forward.
+LCM has arrived to a new stage with its own adaptation of rboot - rboot4lcm - which counts powercycles. These can be used to check updates, reset wifi or factory reset.
+The versions 1.9.x will test at beta level what was started in the repo LCMdev v1.2.5 and lead up to version 2.0.0   
 By having introduced the latest-pre-release concept, users (and LCM itself) can test new software before exposing it to production devices.
 See the 'How to use it' section.
 
@@ -16,6 +17,40 @@ This is a program that allows any simple repository based on esp-open-rtos on es
 - assign a WiFi AccessPoint for internet connectivity
 - specify and install the user app without flashing over cable (once the LCM image is in)
 - update the user app over the air by using releases and versions on GitHub
+
+## New feature version 2
+
+This new LCM code is able to load/update the bootloader from github.  
+The new bootloader is able to count the amount of short power cycles (<1s)  
+The boot loader conveys the count to the loaded code using the rtc.temp_rom value  
+User code is allowed the values from 1-4  
+- 1  : this is a normal boot
+- 2-4: users choice in user code (communicate 3 to user or risk a bit and use 2, 3 and 4 separatly)
+
+If count > 4 the bootloader launches LCM otamain.bin in rom[1]  
+
+For these values the behaviour is controlled through the sysparam string `ota_count_step`.  
+The default value of 3 reduces the chance of user misscounting and triggering something else than intended.
+
+If `ota_count_step=="3"`
+- 5-7: check for new code  (communicate 6 to user)
+- 8-10: erase wifi info (communicate 9 to user)
+- 11-13: factory reset ( (communicate 12 to user)
+- 14-16: factory reset and join LCM_beta (communicate 15 to user)
+
+If `ota_count_step=="2"`
+- 5-6: check for new code  (communicate 5 to user)
+- 7-8: erase wifi info (communicate 7 to user)
+- 9-10: factory reset ( (communicate 9 to user)
+- 11-12: factory reset and join LCM_beta (communicate 11 to user)
+
+If `ota_count_step=="1"`
+- 5: check for new code  (communicate 5 to user)
+- 6: erase wifi info (communicate 6 to user)
+- 7: factory reset ( (communicate 7 to user)
+- 8: factory reset and join LCM_beta (communicate 8 to user)
+
+Missing or other `ota_count_step` values will be interpreted as 3
 
 ## Non-typical solution
 The solution is dedicated to a particular set of repositories and devices, which I consider is worth solving.
@@ -98,7 +133,7 @@ printf "%08x" `cat firmware/main.bin | wc -c`| xxd -r -p >>firmware/main.bin.sig
 This is a bit outdated design from beginning of 2018, but it still serves to read through the code base.
 The actual entry point of the process is the self-updater which is called ota-boot and which is flashed by serial cable.
 
-![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v1.png)
+![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v2.png)
 
 ### Concepts
 ```

@@ -1,4 +1,5 @@
 PROGRAM = otaboot
+EXTRA_CFLAGS += -DOTABOOT
 
 ### select EITHER the top block OR the bottom block
 
