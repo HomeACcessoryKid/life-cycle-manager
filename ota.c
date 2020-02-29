@@ -39,7 +39,8 @@ void MyLoggingCallback(const int logLevel, const char* const logMessage) {
 bool userbeta=0;
 bool otabeta=0;
 
-char *strstr_lc(const char *full_string, const char *search) {
+// ota_strstr(): lowercase version of strstr()
+char *ota_strstr(const char *full_string, const char *search) {
     char *lc_string = strdup(full_string);
 
     unsigned char *ch = (unsigned char *) lc_string;
@@ -592,7 +593,7 @@ char* ota_get_version(char * repo) {
                 recv_buf[ret]=0; //error checking
                 //printf("%s\n",recv_buf);
 
-                location=strstr_lc(recv_buf,"http/1.1 ");
+                location=ota_strstr(recv_buf,"http/1.1 ");
                 //strchr(location,' ')[0]=0;
                 location+=9; //flush "HTTP/1.1 "
                 httpcode=atoi(location);
@@ -604,10 +605,10 @@ char* ota_get_version(char * repo) {
                 }
                 //recv_buf[strlen(recv_buf)]=' '; //for further headers
 
-                location=strstr_lc(recv_buf,"\nlocation:");
+                location=ota_strstr(recv_buf,"\nlocation:");
                 strchr(location,'\r')[0]=0;
                 //printf("%s\n",location);
-                location=strstr_lc(location,"tag/");
+                location=ota_strstr(location,"tag/");
                 if (location[4]=='v' || location[4]=='V') location++;
                 version=malloc(strlen(location+4));
                 strcpy(version,location+4);
@@ -698,7 +699,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
             if (ret > 0) {
                 recv_buf[ret]=0; //error checking, e.g. not result=206
                 printf("%s\n",recv_buf);
-                location=strstr_lc(recv_buf,"http/1.1 ");
+                location=ota_strstr(recv_buf,"http/1.1 ");
                 //strchr(location,' ')[0]=0;
                 location+=9; //flush "HTTP/1.1 "
                 slash=atoi(location);
@@ -777,7 +778,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                     if (header) {
                         //printf("%s\n-------- %d\n", recv_buf, ret);
                         //parse Content-Length: xxxx
-                        location=strstr_lc(recv_buf,"content-length:");
+                        location=ota_strstr(recv_buf,"content-length:");
                         strchr(location,'\r')[0]=0;
 			if (location[15] == ' ') {
                             location++;
@@ -786,7 +787,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         clength=atoi(location);
                         location[strlen(location)]='\r'; //in case the order changes
                         //parse Content-Range: bytes xxxx-yyyy/zzzz
-                        location=strstr_lc(recv_buf,"content-range: bytes ");
+                        location=ota_strstr(recv_buf,"content-range: bytes ");
                         strchr(location,'\r')[0]=0;
                         location+=21; //flush Content-Range: bytes //
                         location=strstr(location,"/"); location++; //flush /
