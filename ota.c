@@ -778,18 +778,18 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                     if (header) {
                         //printf("%s\n-------- %d\n", recv_buf, ret);
                         //parse Content-Length: xxxx
-                        location=ota_strstr(recv_buf,"content-length:");
+                        location=ota_strstr(recv_buf,"\ncontent-length:");
                         strchr(location,'\r')[0]=0;
-			if (location[15] == ' ') {
+			if (location[16] == ' ') {
                             location++;
                         }
-                        location+=15; //flush Content-Length: //
+                        location+=16; //flush Content-Length: //
                         clength=atoi(location);
                         location[strlen(location)]='\r'; //in case the order changes
                         //parse Content-Range: bytes xxxx-yyyy/zzzz
-                        location=ota_strstr(recv_buf,"content-range: bytes ");
+                        location=ota_strstr(recv_buf,"\ncontent-range: bytes ");
                         strchr(location,'\r')[0]=0;
-                        location+=21; //flush Content-Range: bytes //
+                        location+=22; //flush Content-Range: bytes //
                         location=strstr(location,"/"); location++; //flush /
                         length=atoi(location);
                         //verify if last bytes are crlfcrlf else header=1
