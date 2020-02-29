@@ -39,23 +39,16 @@ void MyLoggingCallback(const int logLevel, const char* const logMessage) {
 bool userbeta=0;
 bool otabeta=0;
 
-// ota_strstr(): lowercase version of strstr()
-char *ota_strstr(const char *full_string, const char *search) {
+char *ota_strstr(const char *full_string, const char *search) { //lowercase version of strstr()
     char *lc_string = strdup(full_string);
-
     unsigned char *ch = (unsigned char *) lc_string;
     while(*ch) {
         *ch = tolower(*ch);
         ch++;
     }
-    
     const char *found = strstr(lc_string, search);
     free(lc_string);
-    
-    if(found == NULL) {
-        return NULL;
-    }
-    
+    if(found == NULL) return NULL;    
     const int offset = (int) found - (int) lc_string;
     
     return (char *) ((int) full_string + offset);
@@ -594,7 +587,7 @@ char* ota_get_version(char * repo) {
                 //printf("%s\n",recv_buf);
 
                 location=ota_strstr(recv_buf,"http/1.1 ");
-                //strchr(location,' ')[0]=0;
+//                 strchr(location,' ')[0]=0;
                 location+=9; //flush "HTTP/1.1 "
                 httpcode=atoi(location);
                 UDPLGP("HTTP returns %d for ",httpcode);
@@ -603,7 +596,7 @@ char* ota_get_version(char * repo) {
                     lwip_close(socket);
                     return "404";
                 }
-                //recv_buf[strlen(recv_buf)]=' '; //for further headers
+//                 recv_buf[strlen(recv_buf)]=' '; //for further headers
 
                 location=ota_strstr(recv_buf,"\nlocation:");
                 strchr(location,'\r')[0]=0;
@@ -700,7 +693,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                 recv_buf[ret]=0; //error checking, e.g. not result=206
                 printf("%s\n",recv_buf);
                 location=ota_strstr(recv_buf,"http/1.1 ");
-                //strchr(location,' ')[0]=0;
+//                 strchr(location,' ')[0]=0;
                 location+=9; //flush "HTTP/1.1 "
                 slash=atoi(location);
                 UDPLGP("HTTP returns %d\n",slash);
@@ -709,12 +702,10 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                     lwip_close(socket);
                     return -1;
                 }
-                //recv_buf[strlen(recv_buf)]=' '; //for further headers
-                location=strstr(recv_buf,"\nlocation:");
+//                 recv_buf[strlen(recv_buf)]=' '; //for further headers
+                location=ota_strstr(recv_buf,"\nlocation:");
                 strchr(location,'\r')[0]=0;
-		if (location[10] == ' ') {
-                    location++;
-                }
+		        if (location[10] == ' ') location++;
                 location+=18; //flush Location: https://
                 //printf("%s\n",location);
             } else {
@@ -780,16 +771,16 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         //parse Content-Length: xxxx
                         location=ota_strstr(recv_buf,"\ncontent-length:");
                         strchr(location,'\r')[0]=0;
-			if (location[16] == ' ') {
-                            location++;
-                        }
-                        location+=16; //flush Content-Length: //
+                        location+=16; //flush Content-Length://
+			            //if (location[0] == ' ') location++; //flush a space, atoi would also do that
                         clength=atoi(location);
                         location[strlen(location)]='\r'; //in case the order changes
                         //parse Content-Range: bytes xxxx-yyyy/zzzz
-                        location=ota_strstr(recv_buf,"\ncontent-range: bytes ");
+                        location=ota_strstr(recv_buf,"\ncontent-range:");
                         strchr(location,'\r')[0]=0;
-                        location+=22; //flush Content-Range: bytes //
+                        location+=15; //flush Content-Range://
+                        location=ota_strstr(recv_buf,"bytes ");
+                        location+=6; //flush Content-Range: bytes //
                         location=strstr(location,"/"); location++; //flush /
                         length=atoi(location);
                         //verify if last bytes are crlfcrlf else header=1
