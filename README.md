@@ -2,6 +2,10 @@
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
 (c) 2018-2020 HomeAccessoryKid
 
+## OUTAGE caused by GitHub change of HTTP headers
+Yes, it really really doesn't work any more. You can follow this issue in the community [here](https://github.community/t5/GitHub-API-Development-and/GitHub-changed-the-capitalisation-of-the-HTTP-headers-and-OTA/td-p/48247).
+We are waiting for GitHub to roll back their change. The alternative is to connect via serial and flash version 1.9.1 otabootbeta.bin.  And I am working on an emergency mode so that if this ever happens again, there is a plan B in place.
+
 ## Version
 LCM has arrived to a new stage with its own adaptation of rboot - rboot4lcm - which counts powercycles. These can be used to check updates, reset wifi or factory reset.
 The versions 1.9.x will test at beta level what was started in the repo LCMdev v1.2.5 and lead up to version 2.0.0   
