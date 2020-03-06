@@ -81,12 +81,12 @@ void  ota_read_rtc() {
             UDPLGP("--- standard ota\n");
     }
     else if (count<5+count_step*2) { //reset wifi parameters and clear LCM_beta
-            UDPLGP("--- reset wifi\n");
+            UDPLGP("--- reset wifi and clear LCM_beta\n");
             reset_wifi=1;
             reset_otabeta=1;
     }
     else if (count<5+count_step*3) { //reset wifi parameters and set LCM_beta
-            UDPLGP("--- reset wifi\n");
+            UDPLGP("--- reset wifi and set LCM_beta\n");
             reset_wifi=1;
             otabeta=1;
     }
@@ -133,7 +133,7 @@ void  ota_read_rtc() {
     otabeta=1; //using beta = pre-releases?
     #endif
     if (otabeta && !reset_otabeta) sysparam_set_bool("lcm_beta", 1);
-    if (            reset_otabeta) sysparam_set_bool("lcm_beta", 0);
+    if (            reset_otabeta) sysparam_set_bool("lcm_beta", NULL);
 }
 
 void  ota_active_sector() {
@@ -992,6 +992,7 @@ int  ota_emergency(char * *ota_srvr) {
         char *value;
         if (sysparam_get_string("ota_srvr", &value)== SYSPARAM_OK) *ota_srvr=value; else return 0;
         sysparam_set_string("ota_srvr","");
+        sysparam_set_bool("lcm_beta", NULL);
         UDPLGP("YES: backing up from http://%s" BOOTFILE "\n",*ota_srvr);
         return 1;
     } else return 0;

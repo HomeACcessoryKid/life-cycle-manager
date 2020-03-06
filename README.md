@@ -4,7 +4,7 @@ Initial install, WiFi settings and over the air firmware upgrades for any esp-op
 
 ## OUTAGE caused by GitHub change of HTTP headers
 Yes, it really really doesn't work any more for versions < 1.9.1. You can follow this issue in the community [here](https://github.community/t5/GitHub-API-Development-and/GitHub-changed-the-capitalisation-of-the-HTTP-headers-and-OTA/td-p/48247).
-We are waiting for GitHub to roll back their change. The alternative is to connect via serial and flash version 1.9.2 otabootbeta.bin.
+We are waiting for GitHub to roll back their change. The alternative is to connect via serial and flash version 1.9.3 otabootbeta.bin.
 The emergency mode is ready so that if this ever happens again, there is a plan B in place.
 
 ## Version
