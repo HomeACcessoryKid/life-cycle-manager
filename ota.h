@@ -15,6 +15,8 @@
 #define HOLDOFF_MULTIPLIER 20   //more like 20  -> 20s,400 (~6min),8000 (~2h),160000 (~2days)
 #define HOLDOFF_MAX 604800      //more like 604800 (1 week)
 
+#define EMERGENCY "emergency"
+
 #define SECTORSIZE 4096
 #define HIGHERCERTSECTOR 0xFA000
 #define LOWERCERTSECTOR 0xF9000
@@ -23,6 +25,7 @@
 #define BOOT1SECTOR 0x8D000 //must match the program1.ld value!!
 #define HOST "github.com"
 #define HTTPS_PORT 443
+#define HTTP_PORT   80
 #define FAILED "failed\n"
 #define REQUESTHEAD "GET /"
 #define REQUESTTAIL " HTTP/1.1\r\nHost: "
@@ -51,6 +54,8 @@ int active_cert_sector;
 int backup_cert_sector;
 
 void  ota_read_rtc();
+
+void  ota_active_sector();
 
 void  ota_init();
 
@@ -95,5 +100,7 @@ int   ota_boot(void);
 void  ota_temp_boot(void);
 
 void  ota_reboot(void);
+
+int   ota_emergency(char * *ota_srvr);
 
 #endif // __OTA_H__

@@ -38,9 +38,6 @@ void ota_task(void *arg) {
     int keyid,foundkey=0;
     char keyname[KEYNAMELEN];
     
-    if (ota_boot()) UDPLGP("OTABOOT "); else UDPLGP("OTAMAIN ");
-    UDPLGP("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
-
     ota_init();
     
     if (!active_cert_sector) {
@@ -219,9 +216,37 @@ void ota_task(void *arg) {
     vTaskDelete(NULL); //just for completeness sake, would never get till here
 }
 
+void emergency_task(void *ota_srvr) {
+    signature_t signature;
+    extern int active_cert_sector;
+    
+    ota_active_sector();
+    ota_get_pubkey(active_cert_sector);
+    if (ota_get_hash(ota_srvr,EMERGENCY,BOOTFILE,&signature))       vTaskDelete(NULL);
+    if (ota_verify_signature(&signature))                           vTaskDelete(NULL);
+    if (ota_get_file(ota_srvr,EMERGENCY,BOOTFILE,BOOT0SECTOR)<=0)   vTaskDelete(NULL);
+    if (ota_verify_hash(BOOT0SECTOR,&signature))                    vTaskDelete(NULL);
+    ota_finalize_file(BOOT0SECTOR);
+    ota_reboot(); //boot0, the new otaboot app
+    vTaskDelete(NULL); //just for completeness sake, would never get till here
+}
+
 void on_wifi_ready() {
+    char* ota_srvr=NULL;
     xTaskCreate(udplog_send, "logsend", 256, NULL, 2, NULL);
+
+    if (ota_boot()) UDPLGP("OTABOOT "); else UDPLGP("OTAMAIN ");
+    UDPLGP("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
+
+ota_srvr="192.168.178.10/";
+        xTaskCreate(emergency_task,EMERGENCY,4096,ota_srvr,1,NULL);
+return;    
+
+    if (ota_emergency(&ota_srvr)){
+        xTaskCreate(emergency_task,EMERGENCY,4096,ota_srvr,1,NULL);
+    } else {
     xTaskCreate(ota_task,"ota",4096,NULL,1,NULL);
+    }
     UDPLGP("wifiready-done\n");
 }
 

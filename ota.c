@@ -132,6 +132,35 @@ void  ota_read_rtc() {
     if (otabeta) sysparam_set_bool("lcm_beta", 1);
 }
 
+void  ota_active_sector() {
+    UDPLGP("--- ota_active_sector: ");
+    extern int active_cert_sector;
+    extern int backup_cert_sector;
+    // set active_cert_sector
+    // first byte of the sector is its state:
+    // 0xff backup being evaluated
+    // 0x30 active sector
+    // 0x00 deactivated
+    byte fourbyte[4];
+    active_cert_sector=HIGHERCERTSECTOR;
+    backup_cert_sector=LOWERCERTSECTOR;
+    if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) { //get first 4 active
+        UDPLGP("error reading flash\n");
+    } // if OTHER  vvvvvv sector active
+    if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 || fourbyte[3]!=0x10 ) {
+        active_cert_sector=LOWERCERTSECTOR;
+        backup_cert_sector=HIGHERCERTSECTOR;
+        if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) {
+            UDPLGP("error reading flash\n");
+        }
+        if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 || fourbyte[3]!=0x10 ) {
+            active_cert_sector=0;
+            backup_cert_sector=0;
+        }
+    }
+    UDPLGP("0x%x\n",active_cert_sector);
+}
+
 void  ota_init() {
     UDPLGP("--- ota_init\n");
 
@@ -168,31 +197,7 @@ void  ota_init() {
     if (!ctx) {
         //error
     }
-    extern int active_cert_sector;
-    extern int backup_cert_sector;
-    // set active_cert_sector
-    // first byte of the sector is its state:
-    // 0xff backup being evaluated
-    // 0x30 active sector
-    // 0x00 deactivated
-    byte fourbyte[4];
-    active_cert_sector=HIGHERCERTSECTOR;
-    backup_cert_sector=LOWERCERTSECTOR;
-    if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) { //get first 4 active
-        UDPLGP("error reading flash\n");
-    } // if OTHER  vvvvvv sector active
-    if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 || fourbyte[3]!=0x10 ) {
-        active_cert_sector=LOWERCERTSECTOR;
-        backup_cert_sector=HIGHERCERTSECTOR;
-        if (!spiflash_read(active_cert_sector, (byte *)fourbyte, 4)) {
-            UDPLGP("error reading flash\n");
-        }
-        if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 || fourbyte[3]!=0x10 ) {
-            active_cert_sector=0;
-            backup_cert_sector=0;
-        }
-    }
-    UDPLGP("active_sector: 0x%x\n",active_cert_sector);
+    ota_active_sector();
     ota_set_verify(0);
     UDPLGP("--- DNS: ");
     ret = netconn_gethostbyname(HOST, &target_ip);
@@ -420,6 +425,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     }
     UDPLGP("OK ");
 
+    if (port==HTTPS_PORT) { //SSL mode, in emergency mode this is skipped
     UDPLGP("SSL..");
     *ssl = wolfSSL_new(ctx);
     if (!*ssl) {
@@ -444,6 +450,7 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
         return -1;
     }
     UDPLGP("OK\n");
+    } //end SSL mode
     return 0;
 
 }
@@ -663,18 +670,22 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     int socket;
     //host=begin(repo);
     //mid =end(repo)+blabla+version
-    char* location;
+    char* location=NULL;
     char recv_buf[RECV_BUF_LEN];
     int  recv_bytes = 0;
     int  send_bytes; //= sizeof(send_data);
     int  length=1;
-    int  clength;
+    int  clength=0;
+    int  left;
     int  collected=0;
     int  writespace=0;
     int  header;
+    bool emergency=(strcmp(version,EMERGENCY))?0:1;
+    int  port=(emergency)?HTTP_PORT:HTTPS_PORT;
     
     if (sector==0 && buffer==NULL) return -5; //needs to be either a sector or a signature
     
+    if (!emergency) { //if not emergency, find the redirection done by GitHub
     strcat(strcat(strcat(strcat(strcat(strcat(strcat(strcat(strcpy(recv_buf, \
         REQUESTHEAD),repo),"/releases/download/"),version),"/"),file),REQUESTTAIL),HOST),CRLFCRLF);
     send_bytes=strlen(recv_buf);
@@ -733,6 +744,13 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     if (retc) return retc;
     if (ret <= 0) return ret;
     
+    } else { //emergency mode, repo is expected to have the format "not.github.com/somewhere/"
+        strcpy(recv_buf,repo);
+        location=recv_buf;
+        //if ((location+strlen(location)-1)!='/') strcat(location, "/");
+        strcat(location, file);
+        UDPLGP("emergency GET http://%s\n",location);
+    } //location now contains the url without https:// or http://
     //process the Location
     strcat(location, REQUESTTAIL);
     slash=strchr(location,'/')-location;
@@ -741,7 +759,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     strcpy(host2,location);
     //printf("next host: %s\n",host2);
 
-    retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl);  //release socket and ssl when ready
+    retc = ota_connect(host2, port, &socket, &ssl);  //release socket and ssl when ready
 
     strcat(strcat(location+slash+1,host2),RANGE); //append hostname and range to URI    
     location+=slash-4;
@@ -755,7 +773,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
         send_bytes=strlen(recv_buf);
         //printf("request:\n%s\n",recv_buf);
         printf("send request......");
-        ret = wolfSSL_write(ssl, recv_buf, send_bytes);
+        if (emergency) ret = lwip_write(socket, recv_buf, send_bytes); else ret = wolfSSL_write(ssl, recv_buf, send_bytes);
         recv_bytes=0;
         if (ret > 0) {
             printf("OK\n");
@@ -764,7 +782,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
             memset(recv_buf,0,RECV_BUF_LEN);
             //wolfSSL_Debugging_ON();
             do {
-                ret = wolfSSL_read(ssl, recv_buf, RECV_BUF_LEN - 1);
+                if (emergency) ret = lwip_read(socket, recv_buf, RECV_BUF_LEN - 1); else ret = wolfSSL_read(ssl, recv_buf, RECV_BUF_LEN - 1);
                 if (ret > 0) {
                     if (header) {
                         //printf("%s\n-------- %d\n", recv_buf, ret);
@@ -783,8 +801,15 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         location+=6; //flush Content-Range: bytes //
                         location=strstr(location,"/"); location++; //flush /
                         length=atoi(location);
-                        //verify if last bytes are crlfcrlf else header=1
-                    } else {
+                        location[strlen(location)]='\r'; //search the entire buffer again
+                        location=strstr(recv_buf,CRLFCRLF)+4; //go to end of header
+                        if ((left=ret-(location-recv_buf))) {
+                            header=0; //we have body in the same IP packet as the header so we need to process it already
+                            ret=left;
+                            memmove(recv_buf,location,left); //move this payload to the head of the recv_buf
+                        }
+                    }
+                    if (!header) {
                         recv_bytes += ret;
                         if (sector) { //write to flash
                             if (writespace<ret) {
@@ -811,20 +836,22 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                         printf(" ");
                     }
                 } else {
-                    if (ret) {ret=wolfSSL_get_error(ssl,ret); UDPLGP("error %d\n",ret);}
-                    if (!ret && collected<length) retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl); //memory leak?
+                    if (ret && !emergency) {ret=wolfSSL_get_error(ssl,ret); UDPLGP("error %d\n",ret);}
+                    if (!ret && collected<length) retc = ota_connect(host2, port, &socket, &ssl); //memory leak?
                     break;
                 }
-                header=0; //move to header section itself
+                header=0; //if header and body are separted
             } while(recv_bytes<clength);
             printf(" so far collected %d bytes\n", collected);
             UDPLOG(" collected %d bytes\r",        collected);
         } else {
             printf("failed, return [-0x%x]\n", -ret);
+            if (!emergency) {
             ret=wolfSSL_get_error(ssl,ret);
             printf("wolfSSL_send error = %d\n", ret);
+            }
             if (ret==-308) {
-                retc = ota_connect(host2, HTTPS_PORT, &socket, &ssl); //dangerous for eternal connecting? memory leak?
+                retc = ota_connect(host2, port, &socket, &ssl); //dangerous for eternal connecting? memory leak?
             } else {
                 break; //give up?
             }
@@ -834,7 +861,9 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     switch (retc) {
         case  0:
         case -1:
+        if (!emergency) {
         wolfSSL_free(ssl);
+        }
         case -2:
         lwip_close(socket);
         case -3:
@@ -950,4 +979,16 @@ void  ota_reboot(void) {
 
     vTaskDelay(20); //allows UDPLOG to flush
     sdk_system_restart();
+}
+
+int  ota_emergency(char * *ota_srvr) {
+    UDPLGP("--- ota_emergency\n");
+
+    if (otabeta) {
+        char *value;
+        if (sysparam_get_string("ota_srvr", &value)== SYSPARAM_OK) *ota_srvr=value; else return 0;
+        sysparam_set_string("ota_srvr","");
+        UDPLGP("backing up from http://%s" BOOTFILE "\n",*ota_srvr);
+        return 1;
+    } else return 0;
 }

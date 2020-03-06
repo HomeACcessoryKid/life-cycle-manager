@@ -1,10 +1,10 @@
-PROGRAM = otaboot
-EXTRA_CFLAGS += -DOTABOOT
+#PROGRAM = otaboot
+#EXTRA_CFLAGS += -DOTABOOT
 
 ### select EITHER the top block OR the bottom block
 
-#PROGRAM = otamain
-#LINKER_SCRIPTS = $(ROOT)ld/program1.ld
+PROGRAM = otamain
+LINKER_SCRIPTS = $(ROOT)ld/program1.ld
 
 #==================================================
 # for this to work, we need to copy $(ROOT)ld/program.ld
