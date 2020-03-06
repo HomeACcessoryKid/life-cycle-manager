@@ -61,6 +61,7 @@ void  ota_read_rtc() {
     sysparam_status_t status;
     char *value;
     bool reset_wifi=0;
+    bool reset_otabeta=0;
 	rboot_rtc_data rtc;
 
     status = sysparam_init(SYSPARAMSECTOR, 0);
@@ -79,9 +80,15 @@ void  ota_read_rtc() {
     if      (count<5+count_step*1) { //standard ota-main or ota-boot behavior
             UDPLGP("--- standard ota\n");
     }
-    else if (count<5+count_step*2) { //reset wifi parameters
+    else if (count<5+count_step*2) { //reset wifi parameters and clear LCM_beta
             UDPLGP("--- reset wifi\n");
             reset_wifi=1;
+            reset_otabeta=1;
+    }
+    else if (count<5+count_step*3) { //reset wifi parameters and set LCM_beta
+            UDPLGP("--- reset wifi\n");
+            reset_wifi=1;
+            otabeta=1;
     }
     else    {//factory reset
             UDPLGP("--- factory reset\n");
@@ -90,10 +97,6 @@ void  ota_read_rtc() {
             #ifndef OTABOOT    
              for(sector= 0x2000; sector<BOOT1SECTOR; sector+=SECTORSIZE) spiflash_erase_sector(sector);//user space
             #endif
-    }
-    if      (count>=5+count_step*3) { //factory reset and otabeta
-            UDPLGP("--- set otabeta\n");
-            otabeta=1;
     }
 
     uint32_t base_addr;
@@ -129,7 +132,8 @@ void  ota_read_rtc() {
     #ifdef OTABETA
     otabeta=1; //using beta = pre-releases?
     #endif
-    if (otabeta) sysparam_set_bool("lcm_beta", 1);
+    if (otabeta && !reset_otabeta) sysparam_set_bool("lcm_beta", 1);
+    if (            reset_otabeta) sysparam_set_bool("lcm_beta", 0);
 }
 
 void  ota_active_sector() {
@@ -982,13 +986,13 @@ void  ota_reboot(void) {
 }
 
 int  ota_emergency(char * *ota_srvr) {
-    UDPLGP("--- ota_emergency\n");
+    UDPLGP("--- ota_emergency?\n");
 
     if (otabeta) {
         char *value;
         if (sysparam_get_string("ota_srvr", &value)== SYSPARAM_OK) *ota_srvr=value; else return 0;
         sysparam_set_string("ota_srvr","");
-        UDPLGP("backing up from http://%s" BOOTFILE "\n",*ota_srvr);
+        UDPLGP("YES: backing up from http://%s" BOOTFILE "\n",*ota_srvr);
         return 1;
     } else return 0;
 }

@@ -238,10 +238,6 @@ void on_wifi_ready() {
     if (ota_boot()) UDPLGP("OTABOOT "); else UDPLGP("OTAMAIN ");
     UDPLGP("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
 
-ota_srvr="192.168.178.10/";
-        xTaskCreate(emergency_task,EMERGENCY,4096,ota_srvr,1,NULL);
-return;    
-
     if (ota_emergency(&ota_srvr)){
         xTaskCreate(emergency_task,EMERGENCY,4096,ota_srvr,1,NULL);
     } else {

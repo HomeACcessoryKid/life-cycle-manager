@@ -3,8 +3,9 @@ Initial install, WiFi settings and over the air firmware upgrades for any esp-op
 (c) 2018-2020 HomeAccessoryKid
 
 ## OUTAGE caused by GitHub change of HTTP headers
-Yes, it really really doesn't work any more. You can follow this issue in the community [here](https://github.community/t5/GitHub-API-Development-and/GitHub-changed-the-capitalisation-of-the-HTTP-headers-and-OTA/td-p/48247).
-We are waiting for GitHub to roll back their change. The alternative is to connect via serial and flash version 1.9.1 otabootbeta.bin.  And I am working on an emergency mode so that if this ever happens again, there is a plan B in place.
+Yes, it really really doesn't work any more for versions < 1.9.1. You can follow this issue in the community [here](https://github.community/t5/GitHub-API-Development-and/GitHub-changed-the-capitalisation-of-the-HTTP-headers-and-OTA/td-p/48247).
+We are waiting for GitHub to roll back their change. The alternative is to connect via serial and flash version 1.9.2 otabootbeta.bin.
+The emergency mode is ready so that if this ever happens again, there is a plan B in place.
 
 ## Version
 LCM has arrived to a new stage with its own adaptation of rboot - rboot4lcm - which counts powercycles. These can be used to check updates, reset wifi or factory reset.
@@ -36,23 +37,27 @@ If count > 4 the bootloader launches LCM otamain.bin in rom[1]
 For these values the behaviour is controlled through the sysparam string `ota_count_step`.  
 The default value of 3 reduces the chance of user misscounting and triggering something else than intended.
 
+Note that with LCM_beta mode and wifi erased you can set any emergency fallback server to collect a new signed version of otaboot.bin.
+This is to prevent a lockout as witnessed when Github changed their webserver.
+Tested with macOS [builtin apache server](https://discussions.apple.com/docs/DOC-13841). 
+
 If `ota_count_step=="3"`
 - 5-7: check for new code  (communicate 6 to user)
-- 8-10: erase wifi info (communicate 9 to user)
-- 11-13: factory reset ( (communicate 12 to user)
-- 14-16: factory reset and join LCM_beta (communicate 15 to user)
+- 8-10: erase wifi info and clear LCM_beta mode (communicate 9 to user)
+- 11-13: erase wifi info and set LCM_beta mode (communicate 12 to user)
+- 14-16: factory reset (communicate 15 to user)
 
 If `ota_count_step=="2"`
 - 5-6: check for new code  (communicate 5 to user)
-- 7-8: erase wifi info (communicate 7 to user)
-- 9-10: factory reset ( (communicate 9 to user)
-- 11-12: factory reset and join LCM_beta (communicate 11 to user)
+- 7-8: erase wifi info and clear LCM_beta mode (communicate 7 to user)
+- 9-10: erase wifi info and set LCM_beta mode (communicate 9 to user)
+- 11-12: factory reset (communicate 11 to user)
 
 If `ota_count_step=="1"`
 - 5: check for new code  (communicate 5 to user)
-- 6: erase wifi info (communicate 6 to user)
-- 7: factory reset ( (communicate 7 to user)
-- 8: factory reset and join LCM_beta (communicate 8 to user)
+- 6: erase wifi info and clear LCM_beta mode (communicate 6 to user)
+- 7: erase wifi info and set LCM_beta mode (communicate 7 to user)
+- 8: factory reset (communicate 8 to user)
 
 Missing or other `ota_count_step` values will be interpreted as 3
 
