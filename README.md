@@ -4,8 +4,8 @@ Initial install, WiFi settings and over the air firmware upgrades for any esp-op
 
 ## OUTAGE caused by GitHub change of HTTP headers
 Yes, it really really doesn't work any more for versions < 1.9.1. You can follow this issue in the community [here](https://github.community/t5/GitHub-API-Development-and/GitHub-changed-the-capitalisation-of-the-HTTP-headers-and-OTA/td-p/48247).
-We are waiting for GitHub to roll back their change. The alternative is to connect via serial and flash version 1.9.3 otabootbeta.bin.
-The emergency mode is ready so that if this ever happens again, there is a plan B in place.
+We are waiting for GitHub to roll back their change. The alternative is to connect via serial and flash version 1.9.2+ otaboot.bin.
+The emergency mode (see 'how it works') is ready so if this ever happens again, there is a plan B in place.
 
 ## Version
 LCM has arrived to a new stage with its own adaptation of rboot - rboot4lcm - which counts powercycles. These can be used to check updates, reset wifi or factory reset.
@@ -44,19 +44,19 @@ Tested with macOS [builtin apache server](https://discussions.apple.com/docs/DOC
 If `ota_count_step=="3"`
 - 5-7: check for new code  (communicate 6 to user)
 - 8-10: erase wifi info and clear LCM_beta mode (communicate 9 to user)
-- 11-13: erase wifi info and set LCM_beta mode (communicate 12 to user)
+- 11-13: erase wifi info and set LCM_beta mode and gain access to emergency mode (communicate 12 to user)
 - 14-16: factory reset (communicate 15 to user)
 
 If `ota_count_step=="2"`
 - 5-6: check for new code  (communicate 5 to user)
 - 7-8: erase wifi info and clear LCM_beta mode (communicate 7 to user)
-- 9-10: erase wifi info and set LCM_beta mode (communicate 9 to user)
+- 9-10: erase wifi info and set LCM_beta mode and gain access to emergency mode (communicate 9 to user)
 - 11-12: factory reset (communicate 11 to user)
 
 If `ota_count_step=="1"`
 - 5: check for new code  (communicate 5 to user)
 - 6: erase wifi info and clear LCM_beta mode (communicate 6 to user)
-- 7: erase wifi info and set LCM_beta mode (communicate 7 to user)
+- 7: erase wifi info and set LCM_beta mode and gain access to emergency mode (communicate 7 to user)
 - 8: factory reset (communicate 8 to user)
 
 Missing or other `ota_count_step` values will be interpreted as 3
@@ -139,31 +139,33 @@ printf "%08x" `cat firmware/main.bin | wc -c`| xxd -r -p >>firmware/main.bin.sig
 ```
 
 ## How it works
-This is a bit outdated design from beginning of 2018, but it still serves to read through the code base.
+This design serves to read through the code base.
 The actual entry point of the process is the self-updater which is called ota-boot and which is flashed by serial cable.
 
-![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v2.png)
+![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v3.png)
 
 ### Concepts
 ```
-Main app(0)
-v.x
+User app(0)
+v.X triggers
 ```
-The usercode Main app is running in bootslot 0 at version x
+The usercode Main app is running in bootslot 0 at version x. It can trigger a switch to bootslot 1.  
+Also the tuned bootloader [rBoot4LCM](https://github.com/HomeACcessoryKid/rboot4lcm) can switch to bootslot 1.
 
 ```
-boot=slot1
-baseURL=repo
-version=x
+powercycles select:
 ```
-This represents that in sector1 used by rboot, we will also store the following info
-- baseURL: everything is intended to be relative to https://github.com, so this info is the user/repo part
-- version: the version that this repo is currently running at
-
-After this we run the OTA code which will try to deposit in boot slot 0 the latest version of the baseURL repo.
+Based on the number of cycles, we will check for new versions, reset the wifi parameters or with lcmbeta allow the setting of an emergency server.
+Choosing factory reset will erase all the usercode and parameters so no sensitive data stays behind.
+After this the normal update cycle starts, except if an emergency server is defined
 
 ```
-t
+use http://not.github.com/somewhere/
+```
+After resetting wifi and selecting lcmbeta mode (12 power cycles) the user can specify another base location where the files otaboot.bin.sig and otaboot.bin will be collected.
+This enters emergency mode. If the signature is valid against the public key of LCM then it will replace the bootslot 0 and continue to update otamain etc. 
+```
+(t)
 ```
 This represents an exponential hold-off to prevent excesive hammering on the github servers. It resets at a power-cycle.
 
@@ -177,29 +179,37 @@ This is a file that contains the checksum of the sector containing three certifi
 - root CA used by GitHub
 - root CA used by the DistributedContentProvider (Amazon for now)
 
-First, the file is intended to be downloaded with server certificate verification activated. If this fails, it is downloaded anyway without verification and server is marked as invalid. Once downloaded, the sha256 checksum of the active sector is compared to the checksum in the signature file. If equal, we move on. If not, we download the updated sector file to the standby sector.
+Once downloaded, the signature is checked against the known public key and the sha384 checksum of the active sector is compared to the checksum in the signature file. If equal, we move on. If not, we download the updated sector file to the standby sector.
 
 ```
 signature match?
 ```
-From the sector containing up to date certificates the sha256 hash is signed by the private key of HomeACessoryKid.
-Using the available public key, the validity is verified
+From the sector containing up to date certificates the sha384 hash has been signed by the private key of LCM.
+Using the available public key, the validity is verified. 
+From here, the files are intended to be downloaded with server certificate verification activated. If this fails, the server is marked as invalid.
 
 ```
 server valid?
 ```
-If in the previous steps the server is marked invalid, we return to the main app in boot slot 0 and we report by syslog to a server (to be determinded) so we learn that github has changed its certificate CA provider and HomeACessoryKid can issue a new certificate sector.
+If in the previous steps the server is marked invalid, we return to the main app in boot slot 0 and we report by syslog to a server (to be determinded) so we learn that github has changed its certificate CA provider and HomeACessoryKid can issue a new certificate sector.  
+Now that the downloading from GitHub has been secured, we can trust whatever we download based on a checksum.
+
+```
+new boot version?
+```
+This will download the latest version of [rboot4lcm](https://github.com/HomeACcessoryKid/rboot4lcm)
 
 ```
 new OTA version?
-self-updater(0) update OTAapp➔1
+download OTA-boot➔0
+update OTA-main➔1
 checksum OK?
 ```
-Now that the downloading from GitHub has been secured, we can trust whatever we download based on a checksum.
-We verify if there is an update of this OTA repo itself? If so, we use a self-updater (part of this repo) to 'self update'. After this we have the latest OTA code.
+
+We verify if there is an update of this OTA repo itself? If so, we use ota-boot to self update. After this we have the latest OTA code.
 
 ```
-OTA app(1) updates Main app➔0
+OTA-main(1) updates User app➔0
 checksum OK?
 ```
 Using the baseURL info and the version as stored in sector1, the latest binary is found and downloaded if needed. If the checksum does not work out, we return to the OTA app start point considering we cannot run the old code anymore.
@@ -211,6 +221,6 @@ Note that switching from boot=slot1 to boot=slot0 does not require a reflash
 
 ## AS-IS disclaimer and License
 While I pride myself to make this software error free and backward compatible and otherwise perfect, this is the 
-result of a hobby etc. etc. etc.
+result of a hobby etc. etc. etc. So don't expect me to be responsible for anything...
 
 See the LICENSE file for license information

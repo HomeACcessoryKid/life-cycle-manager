@@ -40,13 +40,6 @@ void ota_task(void *arg) {
     
     ota_init();
     
-    if (!active_cert_sector) {
-        active_cert_sector=HIGHERCERTSECTOR;
-        backup_cert_sector=LOWERCERTSECTOR;
-        ota_version=ota_get_version(OTAREPO);
-        ota_get_file(OTAREPO,ota_version,CERTFILE,active_cert_sector);
-        ota_finalize_file(active_cert_sector);
-    }
     UDPLGP("active_cert_sector: 0x%05x\n",active_cert_sector);
     file_size=ota_get_pubkey(active_cert_sector);
     
@@ -189,9 +182,9 @@ void ota_task(void *arg) {
                 //if there is a newer version of ota-main...
                 if (ota_compare(ota_version,OTAVERSION)>0) { //set OTAVERSION when running make and match with github
                     ota_get_hash(OTAREPO, ota_version, BOOTFILE, &signature);
+                    if (ota_verify_signature(&signature)) continue; //signature file is not signed by our key, ABORT
                     file_size=ota_get_file(OTAREPO,ota_version,BOOTFILE,BOOT0SECTOR);
                     if (file_size<=0) continue; //something went wrong, but now boot0 is broken so start over
-                    if (ota_verify_signature(&signature)) continue; //this should never happen
                     if (ota_verify_hash(BOOT0SECTOR,&signature)) continue; //download failed
                     ota_finalize_file(BOOT0SECTOR);
                     break; //leads to boot=0 and starts self-updating/otaboot-app

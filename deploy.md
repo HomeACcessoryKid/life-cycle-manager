@@ -10,29 +10,29 @@ cd life-cycle-manager
 - initial steps to be expanded
 
 #### These are the steps if not introducing a new key pair
-- create/update the file versions1/latest-pre-release without new-line and setup 1.9.3 version folder
+- create/update the file versions1/latest-pre-release without new-line and setup 1.9.4 version folder
 ```
-mkdir versions1/1.9.3v
-echo -n 1.9.3 > versions1/1.9.3v/latest-pre-release
-cp versions1/certs.sector* versions1/1.9.3v
-cp versions1/public*key*   versions1/1.9.3v
+mkdir versions1/1.9.4v
+echo -n 1.9.4 > versions1/1.9.4v/latest-pre-release
+cp versions1/certs.sector* versions1/1.9.4v
+cp versions1/public*key*   versions1/1.9.4v
 ```
 - set local.mk to the ota-main program
 ```
-make -j6 rebuild OTAVERSION=1.9.3
-mv firmware/otamain.bin versions1/1.9.3v
+make -j6 rebuild OTAVERSION=1.9.4
+mv firmware/otamain.bin versions1/1.9.4v
 ```
 - set local.mk back to ota-boot program
 ```
-make -j6 rebuild OTAVERSION=1.9.3
-mv firmware/otaboot.bin versions1/1.9.3v
-make -j6 rebuild OTAVERSION=1.9.3 OTABETA=1
-cp firmware/otaboot.bin versions1/1.9.3v/otabootbeta.bin
+make -j6 rebuild OTAVERSION=1.9.4
+mv firmware/otaboot.bin versions1/1.9.4v
+make -j6 rebuild OTAVERSION=1.9.4 OTABETA=1
+cp firmware/otaboot.bin versions1/1.9.4v/otabootbeta.bin
 ```
 - remove the older version files
 #
-- commit this as version 1.9.3  
-- set up a new github release 1.9.3 as a pre-release using the just commited master...  
+- commit this as version 1.9.4  
+- set up a new github release 1.9.4 as a pre-release using the just commited master...  
 - upload the certs and binaries to the pre-release assets on github  
 #
 - erase the flash and upload the privatekey
@@ -42,18 +42,18 @@ esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versions1-pr
 ```
 - upload the ota-boot BETA program to the device that contains the private key
 ```
-make flash OTAVERSION=1.9.3 OTABETA=1
+make flash OTAVERSION=1.9.4 OTABETA=1
 ```
 - power cycle to prevent the bug for software reset after flash  
 - setup wifi and select the ota-demo repo without pre-release checkbox  
 - create the 2 signature files next to the bin file and upload to github one by one  
 - verify the hashes on the computer  
 ```
-openssl sha384 versions1/1.9.3v/otamain.bin
-xxd versions1/1.9.3v/otamain.bin.sig
+openssl sha384 versions1/1.9.4v/otamain.bin
+xxd versions1/1.9.4v/otamain.bin.sig
 ```
 
-- upload the file versions1/1.9.3v/latest-pre-release to the 'latest release' assets on github
+- upload the file versions1/1.9.4v/latest-pre-release to the 'latest release' assets on github
 
 #### Testing
 
@@ -92,9 +92,13 @@ xxd -p secp384r1pub.der
 ```
 - capture the private key pem in a secret place and destroy .pem and .der from /tmp
 
-- open certs.hex and replace the first 4 rows with the public key xxd output, then make the new certs.sector
+- open certs.hex and replace the first 4 rows with the public key xxd output, then make the new certs.sector.
 ```
 vi versions1/certs.hex; xxd -p -r versions1/certs.hex > versions1/certs.sector
+```
+- edit certs.h to not contain the trailing 0xff entries. make the length correct.
+```
+cd versions1; xxd -i certs.sector > ../certs.h; cd ..; vi certs.h
 ```
 - start a new release as described above, but in the first run, use the previous private key in 0xf9000
 ```
@@ -102,7 +106,7 @@ esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versionsN-1-
 ```
 - collect public-1.key.sig and store it in the new version folder and copy it to versions1
 ```
-cp  versions1/1.9.3v/public-1.key.sig versions1
+cp  versions1/1.9.4v/public-1.key.sig versions1
 ```
 - then flash the new private key
 ```
@@ -110,6 +114,6 @@ esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versions1-pr
 ```
 - collect cert.sector.sig and store it in the new version folder and copy it to versions1 
 ```
-cp  versions1/1.9.3v/certs.sector.sig versions1
+cp  versions1/1.9.4v/certs.sector.sig versions1
 ```
 - continue with a normal deployment to create the 2 signature files next to the bin files

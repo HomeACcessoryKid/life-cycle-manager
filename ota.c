@@ -133,7 +133,7 @@ void  ota_read_rtc() {
     otabeta=1; //using beta = pre-releases?
     #endif
     if (otabeta && !reset_otabeta) sysparam_set_bool("lcm_beta", 1);
-    if (            reset_otabeta) sysparam_set_bool("lcm_beta", NULL);
+    if (            reset_otabeta) sysparam_set_data("lcm_beta", NULL,0,0);
 }
 
 void  ota_active_sector() {
@@ -158,8 +158,16 @@ void  ota_active_sector() {
             UDPLGP("error reading flash\n");
         }
         if (fourbyte[0]!=0x30 || fourbyte[1]!=0x76 || fourbyte[2]!=0x30 || fourbyte[3]!=0x10 ) {
+#ifdef OTABOOT
+            #include "certs.h"
+            active_cert_sector=HIGHERCERTSECTOR;
+            backup_cert_sector=LOWERCERTSECTOR;
+            spiflash_erase_sector(active_cert_sector); //just in case
+            spiflash_write(active_cert_sector, certs_sector, certs_sector_len);
+#else
             active_cert_sector=0;
             backup_cert_sector=0;
+#endif
         }
     }
     UDPLGP("0x%x\n",active_cert_sector);
@@ -311,7 +319,7 @@ void ota_hash(int start_sector, int filesize, byte * hash, byte first_byte) {
     }
     //printf("%d\n",bytes);
     if (!spiflash_read(start_sector+bytes, (byte *)buffer, filesize-bytes)) {
-        UDPLGP("error reading flash\n");
+        UDPLGP("error reading flash @ %d for %d bytes\n",start_sector+bytes,filesize-bytes);
     }
     if (!bytes && first_byte!=0xff) buffer[0]=first_byte;
     //printf("filesize %d\n",filesize);
@@ -472,7 +480,7 @@ int   ota_load_user_app(char * *repo, char * *version, char * *file) {
     if (status == SYSPARAM_OK) {
         *version=value;
     } else {
-        *version=malloc(6); //TODO check if this is valid coding
+        *version=malloc(6);
         strcpy(*version,"0.0.0");
     }
     status = sysparam_get_string("ota_file", &value);
@@ -751,7 +759,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     } else { //emergency mode, repo is expected to have the format "not.github.com/somewhere/"
         strcpy(recv_buf,repo);
         location=recv_buf;
-        //if ((location+strlen(location)-1)!='/') strcat(location, "/");
+        if (location[strlen(location)-1]!='/') strcat(location, "/");
         strcat(location, file);
         UDPLGP("emergency GET http://%s\n",location);
     } //location now contains the url without https:// or http://
@@ -992,7 +1000,7 @@ int  ota_emergency(char * *ota_srvr) {
         char *value;
         if (sysparam_get_string("ota_srvr", &value)== SYSPARAM_OK) *ota_srvr=value; else return 0;
         sysparam_set_string("ota_srvr","");
-        sysparam_set_bool("lcm_beta", NULL);
+        sysparam_set_data("lcm_beta", NULL,0,0);
         UDPLGP("YES: backing up from http://%s" BOOTFILE "\n",*ota_srvr);
         return 1;
     } else return 0;
