@@ -40,7 +40,6 @@ void ota_task(void *arg) {
     
     ota_init();
     
-    UDPLGP("active_cert_sector: 0x%05x\n",active_cert_sector);
     file_size=ota_get_pubkey(active_cert_sector);
     
 #ifdef OTABOOT    
@@ -148,6 +147,7 @@ void ota_task(void *arg) {
                         continue; //loop and try again later
                     }
                 } else { //we have a signature, maybe also the main file?
+                    if (ota_verify_signature(&signature)) continue; //signature file is not signed by our key, ABORT
                     if (ota_verify_hash(BOOT1SECTOR,&signature)) { //not yet downloaded
                         file_size=ota_get_file(OTAREPO,ota_version,MAINFILE,BOOT1SECTOR);
                         if (file_size<=0) continue; //try again later
@@ -158,7 +158,7 @@ void ota_task(void *arg) {
                 //when switching to LCM we need to introduce the latest public key as used by LCM
                 //ota_get_file(LCMREPO,lcm_version,CERTFILE,backup_cert_sector);
                 //ota_get_pubkey(backup_cert_sector);
-                if (ota_verify_signature(&signature)) continue; //this should never happen
+                //if (ota_verify_signature(&signature)) continue; //this should never happen
                 ota_temp_boot(); //launches the ota software in bootsector 1
 #endif
             } else {  //running ota-main software now

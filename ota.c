@@ -192,7 +192,7 @@ void  ota_init() {
     }
     
     //time support
-    char *servers[] = {SNTP_SERVERS};
+    const char *servers[] = {SNTP_SERVERS};
 	sntp_set_update_delay(24*60*60000); //SNTP will request an update every 24 hour
 	//const struct timezone tz = {1*60, 0}; //Set GMT+1 zone, daylight savings off
 	//sntp_initialize(&tz);
@@ -539,11 +539,14 @@ void  ota_set_verify(int onoff) {
 void  ota_copy_bootloader(int sector, int size, char * version) {
     UDPLGP("--- ota_copy_bootloader\n");
     byte buffer[SECTORSIZE];
+    byte fourbyte[4];
     char versionbuff[MAXVERSIONLEN];
     
     memset(versionbuff,0xff,MAXVERSIONLEN);
     strcpy(versionbuff,version);
     spiflash_read(sector, buffer, size);
+    spiflash_read(0, fourbyte, 4); //transfer the flash setting flags from previous boot sector...
+    buffer[2]=fourbyte[2]; buffer[3]=fourbyte[3];
     spiflash_erase_sector(0);
     spiflash_write(0, buffer, size);
     //version is stored as a string in last MAXVERSIONLEN bytes of sector
@@ -1001,7 +1004,7 @@ int  ota_emergency(char * *ota_srvr) {
         if (sysparam_get_string("ota_srvr", &value)== SYSPARAM_OK) *ota_srvr=value; else return 0;
         sysparam_set_string("ota_srvr","");
         sysparam_set_data("lcm_beta", NULL,0,0);
-        UDPLGP("YES: backing up from http://%s" BOOTFILE "\n",*ota_srvr);
+        UDPLGP("YES: backing up from http://%s\n",*ota_srvr);
         return 1;
     } else return 0;
 }

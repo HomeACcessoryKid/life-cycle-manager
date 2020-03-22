@@ -212,7 +212,7 @@ We verify if there is an update of this OTA repo itself? If so, we use ota-boot 
 OTA-main(1) updates User app➔0
 checksum OK?
 ```
-Using the baseURL info and the version as stored in sector1, the latest binary is found and downloaded if needed. If the checksum does not work out, we return to the OTA app start point considering we cannot run the old code anymore.
+Using the baseURL info and the version as stored in sysparam area, the latest binary is found and downloaded if needed. If the checksum does not work out, we return to the OTA app start point considering we cannot run the old code anymore.
 But normally we boot the new code and the mission is done.
 
 Note that switching from boot=slot1 to boot=slot0 does not require a reflash
