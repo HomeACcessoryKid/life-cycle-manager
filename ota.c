@@ -62,6 +62,7 @@ void  ota_read_rtc() {
     char *value;
     bool reset_wifi=0;
     bool reset_otabeta=0;
+    bool factory_reset=0;
 	rboot_rtc_data rtc;
 
     status = sysparam_init(SYSPARAMSECTOR, 0);
@@ -78,25 +79,36 @@ void  ota_read_rtc() {
     
     UDPLGP("--- count=%d\n",count);
     if      (count<5+count_step*1) { //standard ota-main or ota-boot behavior
-            UDPLGP("--- standard ota\n");
+            value="--- standard ota";
     }
     else if (count<5+count_step*2) { //reset wifi parameters and clear LCM_beta
-            UDPLGP("--- reset wifi and clear LCM_beta\n");
+            value="--- reset wifi and clear LCM_beta\n";
             reset_wifi=1;
             reset_otabeta=1;
     }
     else if (count<5+count_step*3) { //reset wifi parameters and set LCM_beta
-            UDPLGP("--- reset wifi and set LCM_beta\n");
+            value="--- reset wifi and set LCM_beta\n";
             reset_wifi=1;
             otabeta=1;
     }
     else    {//factory reset
-            UDPLGP("--- factory reset\n");
-            spiflash_erase_sector(SYSPARAMSECTOR);    spiflash_erase_sector(SYSPARAMSECTOR+SECTORSIZE);//sysparam reset
-            for (sector=0xfb000; sector<   0x100000; sector+=SECTORSIZE) spiflash_erase_sector(sector);//Espressif area
-            #ifndef OTABOOT    
-             for(sector= 0x2000; sector<BOOT1SECTOR; sector+=SECTORSIZE) spiflash_erase_sector(sector);//user space
-            #endif
+            value="--- factory reset\n";
+            factory_reset=1;
+    }
+    UDPLGP("%s\n",value);
+    if (count>4) {
+        UDPLGP("IF this is NOT what you wanted, reset/power-down NOW!\n");
+        for (int i=9;i>-1;i--) {
+            vTaskDelay(1000/portTICK_PERIOD_MS);
+            UDPLGP("%s in %d s\n",value,i);
+        }
+    }
+    if (factory_reset) {
+        spiflash_erase_sector(SYSPARAMSECTOR);    spiflash_erase_sector(SYSPARAMSECTOR+SECTORSIZE);//sysparam reset
+        for (sector=0xfb000; sector<   0x100000; sector+=SECTORSIZE) spiflash_erase_sector(sector);//Espressif area
+        #ifndef OTABOOT    
+         for(sector= 0x2000; sector<BOOT1SECTOR; sector+=SECTORSIZE) spiflash_erase_sector(sector);//user space
+        #endif
     }
 
     uint32_t base_addr;
@@ -183,11 +195,22 @@ void  ota_init() {
     ip_addr_t target_ip;
     int ret;
     
+    sysparam_status_t status;
+    uint8_t led_info=0;
+    int8_t led=0;
+
+    status = sysparam_get_int8("led_pin", &led);
+    if (status == SYSPARAM_OK) {
+        if (led<0) {led_info=0x10; led=-led;}
+        led_info+=(led<16)?(0x40+(led&0x0f)):0;
+    }
+
     //rboot setup
     rboot_config conf;
     conf=rboot_get_config();
-    if (conf.count!=2 || conf.roms[0]!=BOOT0SECTOR || conf.roms[1]!=BOOT1SECTOR || conf.current_rom!=0) {
-        conf.count =2;   conf.roms[0] =BOOT0SECTOR;   conf.roms[1] =BOOT1SECTOR;   conf.current_rom =0;
+    UDPLGP("rboot_config.unused[1]=LEDinfo from 0x%02x to 0x%02x\n",conf.unused[1],led_info);
+    if (conf.count!=2 || conf.roms[0]!=BOOT0SECTOR || conf.roms[1]!=BOOT1SECTOR || conf.current_rom!=0 || conf.unused[1]!=led_info) {
+        conf.count =2;   conf.roms[0] =BOOT0SECTOR;   conf.roms[1] =BOOT1SECTOR;   conf.current_rom =0;   conf.unused[1] =led_info;
         rboot_set_config(&conf);
     }
     
