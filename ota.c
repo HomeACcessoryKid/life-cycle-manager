@@ -82,17 +82,17 @@ void  ota_read_rtc() {
             value="--- standard ota";
     }
     else if (count<5+count_step*2) { //reset wifi parameters and clear LCM_beta
-            value="--- reset wifi and clear LCM_beta\n";
+            value="--- reset wifi and clear LCM_beta";
             reset_wifi=1;
             reset_otabeta=1;
     }
     else if (count<5+count_step*3) { //reset wifi parameters and set LCM_beta
-            value="--- reset wifi and set LCM_beta\n";
+            value="--- reset wifi and set LCM_beta";
             reset_wifi=1;
             otabeta=1;
     }
     else    {//factory reset
-            value="--- factory reset\n";
+            value="--- factory reset";
             factory_reset=1;
     }
     UDPLGP("%s\n",value);

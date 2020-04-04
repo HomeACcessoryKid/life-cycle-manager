@@ -253,6 +253,6 @@ void user_init(void) {
 #endif
     UDPLGP("VERSION: %s\n",OTAVERSION);
 
-    xTaskCreate(udplog_send, "logsend", 256, NULL, 2, NULL);
-    xTaskCreate(pre_wifi_config, "pre_wifi", 256, NULL, 1, NULL);
+    xTaskCreate(udplog_send, "logsend", 1024, NULL, 2, NULL);
+    xTaskCreate(pre_wifi_config, "pre_wifi", 1024, NULL, 1, NULL);
 }

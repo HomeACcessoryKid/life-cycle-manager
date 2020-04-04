@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.9 increased stack size for logsend and pre-wifi tasks
+- these were showing high watermark errors in testing 1.9.8
+- cosmetic changes to count-down messages
+
 ## 1.9.8 starting udplogger earlier better
 - wifi won't start until user_init is over so created a pre-wifi-task
 
