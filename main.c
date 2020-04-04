@@ -210,6 +210,7 @@ void ota_task(void *arg) {
 }
 
 void emergency_task(void *ota_srvr) {
+    UDPLGP("--- emergency_task\n");
     signature_t signature;
     extern int active_cert_sector;
     
@@ -225,27 +226,33 @@ void emergency_task(void *ota_srvr) {
 }
 
 void on_wifi_ready() {
+    UDPLGP("--- on_wifi_ready\n");
     char* ota_srvr=NULL;
-
-    if (ota_boot()) UDPLGP("OTABOOT "); else UDPLGP("OTAMAIN ");
-    UDPLGP("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
 
     if (ota_emergency(&ota_srvr)){
         xTaskCreate(emergency_task,EMERGENCY,4096,ota_srvr,1,NULL);
     } else {
-    xTaskCreate(ota_task,"ota",4096,NULL,1,NULL);
+        xTaskCreate(ota_task,"ota",4096,NULL,1,NULL);
     }
-    UDPLGP("wifiready-done\n");
+}
+
+void pre_wifi_config(void *pvParameters) {
+    UDPLGP("--- pre_wifi_config\n");
+    ota_read_rtc(); //read RTC outcome from rboot4lcm and act accordingly
+    wifi_config_init("LCM", NULL, on_wifi_ready); //expanded it with setting repo-details
+    vTaskDelete(NULL);
 }
 
 void user_init(void) {
-    UDPLGP("\n\n\n\n\n\n\nuser-init-start\n");
-//    uart_set_baud(0, 74880);
     uart_set_baud(0, 115200);
-    xTaskCreate(udplog_send, "logsend", 256, NULL, 2, NULL);
+    UDPLGP("\n\n\n\n\n\n\n--- user_init\n");
+#ifdef OTABOOT    
+    UDPLGP("--- OTABOOT ");
+#else 
+    UDPLGP("--- OTAMAIN ");
+#endif
+    UDPLGP("VERSION: %s\n",OTAVERSION);
 
-    ota_read_rtc(); //read RTC outcome from rboot4lcm and act accordingly
-        
-    wifi_config_init("LCM", NULL, on_wifi_ready); //expanded it with setting repo-details
-    UDPLGP("user-init-done\n");
+    xTaskCreate(udplog_send, "logsend", 256, NULL, 2, NULL);
+    xTaskCreate(pre_wifi_config, "pre_wifi", 256, NULL, 1, NULL);
 }
