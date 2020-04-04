@@ -226,7 +226,6 @@ void emergency_task(void *ota_srvr) {
 
 void on_wifi_ready() {
     char* ota_srvr=NULL;
-    xTaskCreate(udplog_send, "logsend", 256, NULL, 2, NULL);
 
     if (ota_boot()) UDPLGP("OTABOOT "); else UDPLGP("OTAMAIN ");
     UDPLGP("VERSION: %s\n",OTAVERSION); //including the compile time makes comparing binaries impossible, so don't
@@ -243,6 +242,7 @@ void user_init(void) {
     UDPLGP("\n\n\n\n\n\n\nuser-init-start\n");
 //    uart_set_baud(0, 74880);
     uart_set_baud(0, 115200);
+    xTaskCreate(udplog_send, "logsend", 256, NULL, 2, NULL);
 
     ota_read_rtc(); //read RTC outcome from rboot4lcm and act accordingly
         
