@@ -186,6 +186,7 @@ void  ota_active_sector() {
 }
 
 int8_t led=16;
+TaskHandle_t ledblinkHandle = NULL;
 void   led_blink_task(void *pvParameter) {
     UDPLGP("--- led_blink_task");
     if (led<6 || led>11) { //do not allow pins 6-11
@@ -198,6 +199,7 @@ void   led_blink_task(void *pvParameter) {
     } else {
         UDPLGP(": invalid pin %d\n",led);
     }
+    ledblinkHandle = NULL;
     vTaskDelete(NULL);
 }
 
@@ -218,7 +220,7 @@ void  ota_init() {
     if (status == SYSPARAM_OK) {
         if (led<0) {led_info=0x10; led=-led;}
         led_info+=(led<16)?(0x40+(led&0x0f)):0;
-        if (led<16) xTaskCreate(led_blink_task, "ledblink", 256, NULL, 1, NULL);
+        if (led<16) xTaskCreate(led_blink_task, "ledblink", 256, NULL, 1, &ledblinkHandle);
     }
 
     //rboot setup
@@ -1031,6 +1033,11 @@ void  ota_temp_boot(void) {
 void  ota_reboot(void) {
     UDPLGP("--- ota_reboot\n");
 
+    if (ledblinkHandle) {
+        vTaskDelete(ledblinkHandle);
+        gpio_enable(led, GPIO_INPUT);
+        gpio_set_pullup(led, 0, 0);
+    }
     vTaskDelay(20); //allows UDPLOG to flush
     sdk_system_restart();
 }

@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.9.11 led back to input mode after restart
+- if not, led continues output in last state
+
 ## 1.9.10 introduced blinking led feedback
 - uses the sysparam led_pin and starts blinking only from ota_init onwards
 - cosmetic fixes to design diagram
