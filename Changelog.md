@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.10 introduced blinking led feedback
+- uses the sysparam led_pin and starts blinking only from ota_init onwards
+- cosmetic fixes to design diagram
+
 ## 1.9.9 increased stack size for logsend and pre-wifi tasks
 - these were showing high watermark errors in testing 1.9.8
 - cosmetic changes to count-down messages

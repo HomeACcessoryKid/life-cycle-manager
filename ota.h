@@ -14,7 +14,7 @@
 #define CERTFILE "certs.sector"
 #define HOLDOFF_MULTIPLIER 20   //more like 20  -> 20s,400 (~6min),8000 (~2h),160000 (~2days)
 #define HOLDOFF_MAX 604800      //more like 604800 (1 week)
-
+#define BLINKDELAY 250
 #define EMERGENCY "emergency"
 
 #define SECTORSIZE 4096

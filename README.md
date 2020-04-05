@@ -142,7 +142,7 @@ printf "%08x" `cat firmware/main.bin | wc -c`| xxd -r -p >>firmware/main.bin.sig
 This design serves to read through the code base.
 The actual entry point of the process is the self-updater which is called ota-boot and which is flashed by serial cable.
 
-![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v3.png)
+![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v4.png)
 
 ### Concepts
 ```

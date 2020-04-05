@@ -185,6 +185,22 @@ void  ota_active_sector() {
     UDPLGP("0x%x\n",active_cert_sector);
 }
 
+int8_t led=16;
+void   led_blink_task(void *pvParameter) {
+    UDPLGP("--- led_blink_task");
+    if (led<6 || led>11) { //do not allow pins 6-11
+        UDPLGP(" blinking led pin %d\n",led);
+        gpio_enable(led, GPIO_OUTPUT);
+        while(1) {
+            gpio_write(led, 1); vTaskDelay(BLINKDELAY/portTICK_PERIOD_MS);
+            gpio_write(led, 0); vTaskDelay(BLINKDELAY/portTICK_PERIOD_MS);
+        }
+    } else {
+        UDPLGP(": invalid pin %d\n",led);
+    }
+    vTaskDelete(NULL);
+}
+
 void  ota_init() {
     UDPLGP("--- ota_init\n");
 
@@ -197,12 +213,12 @@ void  ota_init() {
     
     sysparam_status_t status;
     uint8_t led_info=0;
-    int8_t led=0;
 
     status = sysparam_get_int8("led_pin", &led);
     if (status == SYSPARAM_OK) {
         if (led<0) {led_info=0x10; led=-led;}
         led_info+=(led<16)?(0x40+(led&0x0f)):0;
+        if (led<16) xTaskCreate(led_blink_task, "ledblink", 256, NULL, 1, NULL);
     }
 
     //rboot setup
