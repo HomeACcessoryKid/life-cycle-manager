@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.9.12 added led option to the serial config menu
+
 ## 1.9.11 led back to input mode after restart
 - if not, led continues output in last state
 
@@ -36,4 +38,49 @@ Else it will break the access to the flash in case it is not compatible.
 to [esp-open-rtos#bc97988](https://github.com/SuperHouse/esp-open-rtos/commit/bc979883c27ea57e948daa813e2bca752ebd39e1)  
 - change the verification of the signature of otamain.bin prior to downloading this file instead of afterwards
 
-## 1.9.4 and before will be updated in the future
+## 1.9.4 load initial cert from inside OTABOOT plus details
+- clear lcm_beta instead of setting it to 0
+- allow for missing trailing / in emergency base URL
+- updated README.md and design diagram
+- changed order for checking otaboot.sig
+
+## 1.9.3 clear LCM_beta after emergency
+- this didn't actually work
+
+## 1.9.2 first test of LANmode fallback
+- after GitHub changed their http header this allows to recover
+- also called emergency mode
+
+## proof of concept emergency mode
+
+## 1.9.1 fix to make http header parsing more robust
+- after GitHub changed the syntax of Location: to location:
+
+## Fixes bug caused by GitHub header changes (#22) 
+- Fixes case sensitive headers.
+- Makes blank space optional for some headers.
+- Rename strstr_lc() function to ota_strstr().
+- Added '\n' to the beginning of some headers.
+
+## 1.9.0 transfer from LCMdev 1.2.5
+- LCM has arrived to a new stage with its own adaptation of rboot -
+rboot4lcm - which counts powercycles. These can be used to check
+updates, reset wifi or factory reset.
+The versions 1.9.x will test at beta level what was started in the repo
+LCMdev v1.2.5 and lead up to version 2.0.0
+
+## updates done in LCMdev
+- 1.2.5 really erase wifi settings and fix ota_beta readout
+- 1.2.4 changed ota_count_step to sysparam string
+- 1.2.3 ota_count_step defines power cycle behaviour
+- 1.2.2 documentation update
+- 1.2.2 improved wifi reset code
+- 1.2.1 fixed wifi erase and ota_new_layout
+- 1.2.0 read rtc power cycle count and reduce ota-main binary
+- 1.1.2 fix boot bits init and serial input
+- 1.1.1 fixed the position of boot update code to ota-main-only
+- 1.1.0 added update of boot loader and minor fixes
+- 1.0.1 initial adjustments after cloning 
+- 1.0.0 clone of Life-Cycle-Manager 1.0.0
+
+## completed instructions how to integrate with esp-homekit
