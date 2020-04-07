@@ -3,14 +3,30 @@ Initial install, WiFi settings and over the air firmware upgrades for any esp-op
 (c) 2018-2020 HomeAccessoryKid
 
 ## OUTAGE caused by GitHub change of HTTP headers
-Yes, it really really doesn't work any more for versions < 1.9.1. You can follow this issue in the community [here](https://github.community/t5/GitHub-API-Development-and/GitHub-changed-the-capitalisation-of-the-HTTP-headers-and-OTA/td-p/48247).
-We are waiting for GitHub to roll back their change. The alternative is to connect via serial and flash version 1.9.2+ otaboot.bin.
-The emergency mode (see 'how it works') is ready so if this ever happens again, there is a plan B in place.
+Good news and bad news. Version 2.0.0 is here and it works and is protected. But you have to solder a serial port again.
+
+Yes, it really really doesn't work any more for versions < 1.9.1. 
+You can follow this issue [#23](https://github.com/HomeACcessoryKid/life-cycle-manager/issues/23) in the community 
+[here](https://github.community/t5/GitHub-API-Development-and/GitHub-changed-the-capitalisation-of-the-HTTP-headers-and-OTA/m-p/52528#M4491) 
+except that GitHub has marked our 7000 views and 51 Kudos message as Spam!
+We were waiting for GitHub to roll back their change but personally I gave up. We are very disapointend – they didn't even bother to write back once!  
+You will have to access the device again via the serial port and flash a new otaboot.bin file
+- download the latest [otaboot.bin](https://github.com/HomeACcessoryKid/life-cycle-manager/releases/download/1.9.12/otaboot.bin)
+- `esptool.py -p /dev/cu.usbserial-* write_flash 0x2000 ~/Downloads/otaboot.bin`
+
+This will preserve all other info in your device like homekit pairing, wifi, etc.  
+It will take up to 8 minutes to update so be patient.
+
+The emergency mode (see 'how it works') is completly independent of external factors.  
+If this ever happens again, we have a plan B in place.  
+If you feel that you want to [switch over to HAA-OTA](https://github.com/RavenSystem/esp-homekit-devices/wiki/Installation) 
+then this is the moment to verify if it provides the features you are looking for. We forked apart some time ago.
 
 ## Version
-LCM has arrived to a new stage with its own adaptation of rboot - rboot4lcm - which counts powercycles. These can be used to check updates, reset wifi or factory reset.
-The versions 1.9.x will test at beta level what was started in the repo LCMdev v1.2.5 and lead up to version 2.0.0   
-By having introduced the latest-pre-release concept, users (and LCM itself) can test new software before exposing it to production devices.
+With version 2.0.0 LCM has arrived to a new stage with its own adaptation of rboot - rboot4lcm - which counts powercycles.
+These are used to check updates, reset wifi clear or set LCM_beta or factory reset. It also gives access to the emergency mode.  
+Setting a value for a led_pin visual feedback is possible.
+By having introduced the latest-pre-release concept in version 1.0.0, users (and LCM itself) can test new software before exposing it to production devices.
 See the 'How to use it' section.
 
 Meanwhile, at https://github.com/HomeACcessoryKid/ota version 0.3.0 is the version that will transfer a 0.1.0 release used by early starters whenever they trigger an update.
@@ -26,7 +42,8 @@ This is a program that allows any simple repository based on esp-open-rtos on es
 ## New feature version 2
 
 This new LCM code is able to load/update the bootloader from github.  
-The new bootloader is able to count the amount of short power cycles (<1s)  
+The new bootloader is able to count the amount of short power cycles (<1.5s)  
+From the second cycle the cycles must be shorter than 4 seconds. Also a LED is lit if defined.  
 The boot loader conveys the count to the loaded code using the rtc.temp_rom value  
 User code is allowed the values from 1-4  
 - 1  : this is a normal boot
@@ -35,13 +52,14 @@ User code is allowed the values from 1-4
 If count > 4 the bootloader launches LCM otamain.bin in rom[1]  
 
 For these values the behaviour is controlled through the sysparam string `ota_count_step`.  
-The default value of 3 reduces the chance of user misscounting and triggering something else than intended.
+The default value of 3 reduces the chance of user misscounting and triggering something else than intended or playfull children.
 
 Note that with LCM_beta mode and wifi erased you can set any emergency fallback server to collect a new signed version of otaboot.bin.
-This is to prevent a lockout as witnessed when Github changed their webserver.
-Tested with macOS [builtin apache server](https://discussions.apple.com/docs/DOC-13841). 
+This is to prevent a lockout as witnessed when Github changed their webserver.  
+Tested with macOS [builtin apache server](https://discussions.apple.com/docs/DOC-13841).  
+By monitoring the output with the terminal command `nc -kulnw0 45678` you have 10 seconds to see which action was chosen before it executes.
 
-If `ota_count_step=="3"`
+If `ota_count_step=="3"` (default)
 - 5-7: check for new code  (communicate 6 to user)
 - 8-10: erase wifi info and clear LCM_beta mode (communicate 9 to user)
 - 11-13: erase wifi info and set LCM_beta mode and gain access to emergency mode (communicate 12 to user)
@@ -129,7 +147,7 @@ User device setup part
 - set the repository you want to use in your device. yourname/repository  and name of binary
 - then select your Wifi AP and insert your password
 - once selected, it will take up to 5 minutes for the system to download the ota-main software in the second bootsector and the user code in the 1st boot sector
-- you can follow progress on the serial port or use the UDPlogger using the terminal command 'nc -kulnw0 45678'
+- you can follow progress on the serial port or use the UDPlogger using the terminal command `nc -kulnw0 45678`
 
 ## Creating a user app DigitalSignature
 from the directory where `make` is run execute:
