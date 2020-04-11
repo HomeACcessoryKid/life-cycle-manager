@@ -11,11 +11,11 @@ You can follow this issue [#23](https://github.com/HomeACcessoryKid/life-cycle-m
 except that GitHub has marked our 7000 views and 51 Kudos message as Spam!
 We were waiting for GitHub to roll back their change but personally I gave up. We are very disapointend – they didn't even bother to write back once!  
 You will have to access the device again via the serial port and flash a new otaboot.bin file
-- download the latest [otaboot.bin](https://github.com/HomeACcessoryKid/life-cycle-manager/releases/download/1.9.12/otaboot.bin)
+- download the latest [otaboot.bin](https://github.com/HomeACcessoryKid/life-cycle-manager/releases/download/2.0.0/otaboot.bin)
 - `esptool.py -p /dev/cu.usbserial-* write_flash 0x2000 ~/Downloads/otaboot.bin`
 
 This will preserve all other info in your device like homekit pairing, wifi, etc.  
-It will take up to 8 minutes to update so be patient.
+It will take up to 8 minutes to update, so be patient.
 
 The emergency mode (see 'how it works') is completly independent of external factors.  
 If this ever happens again, we have a plan B in place.  
@@ -23,6 +23,7 @@ If you feel that you want to [switch over to HAA-OTA](https://github.com/RavenSy
 then this is the moment to verify if it provides the features you are looking for. We forked apart some time ago.
 
 ## Version
+[Changelog](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/Changelog.md)  
 With version 2.0.0 LCM has arrived to a new stage with its own adaptation of rboot - rboot4lcm - which counts powercycles.
 These are used to check updates, reset wifi clear or set LCM_beta or factory reset. It also gives access to the emergency mode.  
 Setting a value for a led_pin visual feedback is possible.
@@ -114,8 +115,8 @@ If you feel you need 100% control, you can fork this repository, create your own
 But since the code of LCM is public, by audit it is unlikely that malicious events will happen. It is up to you. And if you have ideas how to improve on this subject, please share your ideas in the issue #1 that is open for this reason.
 
 ## How to use it
-User preparation part  
-- in an appropriate part of your code, add these two function calls which will trigger an update:
+User code preparation part
+- in an appropriate part of your code, add these two function calls which will trigger an update if you want to:
 - ```rboot_set_temp_rom(1); //select the OTA main routine```
 - ```sdk_system_restart();  //#include <rboot-api.h>```
 - there is a bug in the esp SDK such that if you do not power cycle the chip after flashing, restart is unreliable

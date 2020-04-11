@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0 stable new version with new functions
+- rboot4lcm gives control regardless of the user code
+- emergency mode allows to replace code OTA without dependency of GitHub
+- ability to define a led pin for visual feedback
+- load initial certificate from inside otaboot.bin
+- see the change log below for all the details
+
+## 2.0.0 when using serial config, set ota_version=0.0.0
+
 ## 1.9.12 added led option to the serial config menu
 
 ## 1.9.11 led back to input mode after restart
