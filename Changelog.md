@@ -1,5 +1,7 @@
 # Changelog
 
+## 2.0.1 fix serial config menu after confirm stalling
+
 ## 2.0.0 stable new version with new functions
 - rboot4lcm gives control regardless of the user code
 - emergency mode allows to replace code OTA without dependency of GitHub
