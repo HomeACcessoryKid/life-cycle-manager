@@ -56,6 +56,7 @@ void ota_task(void *arg) {
 #endif
     if (ota_boot()) ota_write_status("0.0.0");  //we will have to get user code from scratch if running ota_boot
     if ( !ota_load_user_app(&user_repo, &user_version, &user_file)) { //repo/file must be configured
+        if (!strcmp(user_repo,HAAREPO)) user_file=HAAFILE;
 #ifdef OTABOOT    
         if (ota_boot()) {
             new_version=ota_get_version(user_repo); //check if this repository exists at all

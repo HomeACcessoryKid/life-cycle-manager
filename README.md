@@ -11,7 +11,7 @@ You can follow this issue [#23](https://github.com/HomeACcessoryKid/life-cycle-m
 except that GitHub has marked our 7000 views and 51 Kudos message as Spam!
 We were waiting for GitHub to roll back their change but personally I gave up. We are very disapointend – they didn't even bother to write back once!  
 You will have to access the device again via the serial port and flash a new otaboot.bin file
-- download the latest [otaboot.bin](https://github.com/HomeACcessoryKid/life-cycle-manager/releases/download/2.0.1/otaboot.bin)
+- download the latest [otaboot.bin](https://github.com/HomeACcessoryKid/life-cycle-manager/releases/latest/download/otaboot.bin)
 - `esptool.py -p /dev/cu.usbserial-* write_flash 0x2000 ~/Downloads/otaboot.bin`
 
 This will preserve all other info in your device like homekit pairing, wifi, etc. unless you stored them below 0x6D000  

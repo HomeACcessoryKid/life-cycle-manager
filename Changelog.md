@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.2 overwrite RavenSystem/haa filename with lcm special version
+- this special version uses sysparam definition compatible with lcm 
+
 ## 2.0.1 fix serial config menu after confirm stalling
 
 ## 2.0.0 stable new version with new functions

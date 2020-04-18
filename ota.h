@@ -12,6 +12,8 @@
 #define MAINFILE "otamain.bin"
 #define BOOTFILE "otaboot.bin"
 #define CERTFILE "certs.sector"
+#define HAAREPO "RavenSystem/haa"
+#define HAAFILE "haa_lcm.bin"
 #define HOLDOFF_MULTIPLIER 20   //more like 20  -> 20s,400 (~6min),8000 (~2h),160000 (~2days)
 #define HOLDOFF_MAX 604800      //more like 604800 (1 week)
 #define BLINKDELAY 250
