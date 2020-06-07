@@ -2,14 +2,15 @@
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
 (c) 2018-2020 HomeAccessoryKid
 
-## OUTAGE caused by GitHub change of HTTP headers
-Good news and bad news. Version 2.0.0 is here and it works and is protected. But you have to solder a serial port again.
+### OUTAGE caused by GitHub change of HTTP headers
+Good news and bad news. Version 2.0.0+ is here and it works and is protected. But you have to solder a serial port again.
 
 Yes, it really really doesn't work any more for versions < 1.9.1. 
-You can follow this issue [#23](https://github.com/HomeACcessoryKid/life-cycle-manager/issues/23) in the community 
-[here](https://github.community/t5/GitHub-API-Development-and/GitHub-changed-the-capitalisation-of-the-HTTP-headers-and-OTA/m-p/52528#M4491) 
-except that GitHub has marked our 7000 views and 51 Kudos message as Spam!
-We were waiting for GitHub to roll back their change but personally I gave up. We are very disapointend – they didn't even bother to write back once!  
+After a long time we got a response from GitHub [#23](https://github.com/HomeACcessoryKid/life-cycle-manager/issues/23).
+I learned that with HTTP/2 the headers are expected to be lowercase
+always. This means that GitHub is making their infrastructure ready for the future and I agree it makes sense for them.
+So, I accept our loss and that it was my lack of knowing that a HTTP header has to be case insensitive that caused all this.
+
 You will have to access the device again via the serial port and flash a new otaboot.bin file
 - download the latest [otaboot.bin](https://github.com/HomeACcessoryKid/life-cycle-manager/releases/latest/download/otaboot.bin)
 - `esptool.py -p /dev/cu.usbserial-* write_flash 0x2000 ~/Downloads/otaboot.bin`
@@ -18,7 +19,7 @@ This will preserve all other info in your device like homekit pairing, wifi, etc
 It will take up to 8 minutes to update, so be patient.
 
 The emergency mode (see 'how it works') is completly independent of external factors.  
-If this ever happens again, we have a plan B in place.  
+If this ever happens again, this emergency mode is the plan B we have in place.  
 If you feel that you want to [switch over to HAA-OTA](https://github.com/RavenSystem/esp-homekit-devices/wiki/Installation) 
 then this is the moment to verify if it provides the features you are looking for. We forked apart some time ago.
 
