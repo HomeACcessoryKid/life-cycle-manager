@@ -1,4 +1,4 @@
-/* (c) 2018-2020 HomeAccessoryKid
+/* (c) 2018-2021 HomeAccessoryKid
  * LifeCycleManager dual app
  * use local.mk to turn it into the LCM otamain.bin app or the otaboot.bin app
  */
@@ -199,7 +199,7 @@ void ota_task(void *arg) {
                         if (file_size<=0 || ota_verify_hash(BOOT0SECTOR,&signature)) continue; //something went wrong, but now boot0 is broken so start over
                         ota_finalize_file(BOOT0SECTOR); //TODO return status and if wrong, continue
                         ota_write_status(new_version); //we have been successful, hurray!
-                    }
+                    } else continue; //user did not supply a proper sig file -> enter the loop
                 } //nothing to update
                 break; //leads to boot=0 and starts updated user app
 #endif

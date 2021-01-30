@@ -1,4 +1,4 @@
-/*  (c) 2018-2020 HomeAccessoryKid */
+/*  (c) 2018-2021 HomeAccessoryKid */
 #include <stdlib.h>  //for UDPLGP
 #include <stdio.h>
 #include <string.h>
@@ -701,7 +701,11 @@ char* ota_get_version(char * repo) {
         prerelease[63]=0;
         ret=ota_get_file_ex(repo,version,"latest-pre-release",0,(byte *)prerelease,63);
         if (ret>0) {
-            prerelease[ret]=0;
+            prerelease[ret]=0; //TODO: UNTESTED make a final 0x0a and or 0x0d optional
+            if (prerelease[ret-1]=='\n') {
+                prerelease[ret-1]=0;
+                if (prerelease[ret-2]=='\r') prerelease[ret-2]=0;                
+            }
             free(version);
             version=malloc(strlen(prerelease)+1);
             strcpy(version,prerelease);

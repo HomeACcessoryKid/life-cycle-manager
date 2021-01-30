@@ -1,6 +1,6 @@
 # Life-Cycle-Manager (LCM)
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
-(c) 2018-2020 HomeAccessoryKid
+(c) 2018-2021 HomeAccessoryKid
 
 ### OUTAGE caused by GitHub change of HTTP headers
 Good news and bad news. Version 2.0.0+ is here and it works and is protected. But you have to solder a serial port again.
@@ -197,7 +197,7 @@ Download Certificates
 This is a file that contains the checksum of the sector containing three certificates/keys
 - public key of HomeACessoryKid that signs the certificate/key sector 
 - root CA used by GitHub
-- root CA used by the DistributedContentProvider (Amazon for now)
+- root CA used by the DistributedContentProvider (now GitHub's own, Amazon until release 2.1.0)
 
 Once downloaded, the signature is checked against the known public key and the sha384 checksum of the active sector is compared to the checksum in the signature file. If equal, we move on. If not, we download the updated sector file to the standby sector.
 

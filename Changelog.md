@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.0 updated to the new certificate used by GitHub for the content distribution server
+- GitHub switched to their own domain and now use a DigiCert CA instead of Baltimore CA
+- make a final 0x0a and or 0x0d optional for the prerelease file
+- fixed an exception if user did not provide proper .sig file
+
 ## 2.0.2 overwrite RavenSystem/haa filename with lcm special version
 - this special version uses sysparam definition compatible with lcm 
 
