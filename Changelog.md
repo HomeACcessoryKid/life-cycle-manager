@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.1.2 creating smaller otamain.bin with -Os
+- because 2.1.1 otamain was too big and clobbered sysparam area
+
 ## 2.1.1 introduced SNI extension to fix issue created by GitHub new CDN
 - without SNI the server presents the wrong certificate
 - no need to add the intermediate certificate since it is offered by the server
