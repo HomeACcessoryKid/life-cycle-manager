@@ -197,7 +197,7 @@ Download Certificates
 This is a file that contains the checksum of the sector containing three certificates/keys
 - public key of HomeACessoryKid that signs the certificate/key sector 
 - root CA used by GitHub
-- root CA used by the DistributedContentProvider (now GitHub's own, Amazon until release 2.1.0)
+- root CA used by the DistributedContentProvider (now GitHub's own, Amazon before release 2.1.0)
 
 Once downloaded, the signature is checked against the known public key and the sha384 checksum of the active sector is compared to the checksum in the signature file. If equal, we move on. If not, we download the updated sector file to the standby sector.
 

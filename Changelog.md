@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.1 introduced SNI extension to fix issue created by GitHub new CDN
+- without SNI the server presents the wrong certificate
+- no need to add the intermediate certificate since it is offered by the server
+- this means the certificate file remains the same as in version 2.0.2
+
 ## 2.1.0 updated to the new certificate used by GitHub for the content distribution server
 - GitHub switched to their own domain and now use a DigiCert CA instead of Baltimore CA
 - make a final 0x0a and or 0x0d optional for the prerelease file

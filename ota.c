@@ -491,6 +491,14 @@ static int ota_connect(char* host, int port, int *socket, WOLFSSL** ssl) {
     wolfSSL_set_fd(*ssl, *socket);
     UDPLGP("set_fd ");
 
+    ret = wolfSSL_UseSNI(*ssl, WOLFSSL_SNI_HOST_NAME, host, strlen(host));
+    if (ret != SSL_SUCCESS) {
+        UDPLGP("failed, return [-0x%x]\n", -ret);
+        ret=wolfSSL_get_error(*ssl,ret);
+        UDPLGP("wolfSSL_UseSNI error = %d\n", ret);
+        return -1;
+    }
+
     if (verify) ret=wolfSSL_check_domain_name(*ssl, host);
 //wolfSSL_Debugging_OFF();
 
