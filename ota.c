@@ -39,19 +39,23 @@ void MyLoggingCallback(const int logLevel, const char* const logMessage) {
 bool userbeta=0;
 bool otabeta=0;
 
-char *ota_strstr(const char *full_string, const char *search) { //lowercase version of strstr()
-    char *lc_string = strdup(full_string);
-    unsigned char *ch = (unsigned char *) lc_string;
-    while(*ch) {
-        *ch = tolower(*ch);
-        ch++;
+char* ota_strstr(char* full_string, const char* search) { // lowercase version of strstr()
+    const size_t search_len = strlen(search);
+    for (size_t i = 0; i <= strlen(full_string) - search_len; i++) {
+        if (tolower((unsigned char) full_string[i]) == tolower((unsigned char) search[0])) {
+            for (size_t j = 0; j < search_len; j++) {
+                if (tolower((unsigned char) full_string[i + j]) != tolower((unsigned char) search[j])) {
+                    break;
+                }
+                
+                if (j == search_len - 1) {
+                    return full_string + i;
+                }
+            }
+        }
     }
-    const char *found = strstr(lc_string, search);
-    free(lc_string);
-    if(found == NULL) return NULL;    
-    const int offset = (int) found - (int) lc_string;
     
-    return (char *) ((int) full_string + offset);
+    return NULL;
 }
 
 void  ota_read_rtc() {
