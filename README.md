@@ -2,6 +2,11 @@
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
 (c) 2018-2021 HomeAccessoryKid
 
+### February 2021
+Due to GitHub changing their server, it is needed to update your devices before 23 of March.  
+ALSO, it is possible to recover devices with LCM version before 1.9.1 again.
+See issue [#29](https://github.com/HomeACcessoryKid/life-cycle-manager/issues/29) for details
+
 ### OUTAGE caused by GitHub change of HTTP headers
 Good news and bad news. Version 2.0.0+ is here and it works and is protected. But you have to solder a serial port again.
 
