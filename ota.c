@@ -634,7 +634,7 @@ char* ota_get_version(char * repo) {
     int socket;
     //host=begin(repo);
     //mid =end(repo)+blabla+version
-    char* location;
+    char* found_ptr;
     char recv_buf[RECV_BUF_LEN];
     int  send_bytes; //= sizeof(send_data);
     
@@ -651,37 +651,47 @@ char* ota_get_version(char * repo) {
         if (ret > 0) {
             printf("sent OK\n");
 
-            //wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
             if (ret > 0) {
-                recv_buf[ret]=0; //error checking
-                //printf("%s\n",recv_buf);
-
-                location=ota_strstr(recv_buf,"http/1.1 ");
-//                 strchr(location,' ')[0]=0;
-                location+=9; //flush "HTTP/1.1 "
-                httpcode=atoi(location);
+                recv_buf[ret]=0; //prevent falling of the end of the buffer when doing string operations
+                found_ptr=ota_strstr(recv_buf,"http/1.1 ");
+                found_ptr+=9; //flush "HTTP/1.1 "
+                httpcode=atoi(found_ptr);
                 UDPLGP("HTTP returns %d for ",httpcode);
                 if (httpcode!=302) {
                     wolfSSL_free(ssl);
                     lwip_close(socket);
                     return "404";
                 }
-//                 recv_buf[strlen(recv_buf)]=' '; //for further headers
-
-                location=ota_strstr(recv_buf,"\nlocation:");
-                strchr(location,'\r')[0]=0;
-                //printf("%s\n",location);
-                location=ota_strstr(location,"tag/");
-                if (location[4]=='v' || location[4]=='V') location++;
-                version=malloc(strlen(location+4));
-                strcpy(version,location+4);
-                printf("%s@version:\"%s\" according to latest release\n",repo,version);
             } else {
                 UDPLGP("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
                 UDPLGP("wolfSSL_send error = %d\n", ret);
+                return "404";
             }
+
+            while (1) {
+                recv_buf[ret]=0; //prevent falling of the end of the buffer when doing string operations
+                found_ptr=ota_strstr(recv_buf,"\nlocation:");
+                if (found_ptr) break;
+                wolfSSL_read(ssl, recv_buf, RECV_BUF_LEN - 12);
+                ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
+                if (ret <= 0) {
+                    UDPLGP("failed, return [-0x%x]\n", -ret);
+                    ret=wolfSSL_get_error(ssl,ret);
+                    UDPLGP("wolfSSL_send error = %d\n", ret);
+                    return "404";
+                }
+            }
+            ret=wolfSSL_read(ssl, recv_buf, found_ptr-recv_buf + 11); //flush all previous material
+            ret=wolfSSL_read(ssl, recv_buf, RECV_BUF_LEN - 1); //this starts for sure with the content of "Location: "
+            recv_buf[ret]=0; //prevent falling of the end of the buffer when doing string operations
+            strchr(recv_buf,'\r')[0]=0;
+            found_ptr=ota_strstr(recv_buf,"releases/tag/");
+            if (found_ptr[13]=='v' || found_ptr[13]=='V') found_ptr++;
+            version=malloc(strlen(found_ptr+13));
+            strcpy(version,found_ptr+13);
+            printf("%s@version:\"%s\" according to latest release\n",repo,version);
         } else {
             UDPLGP("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
@@ -738,7 +748,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     int socket;
     //host=begin(repo);
     //mid =end(repo)+blabla+version
-    char* location=NULL;
+    char* found_ptr=NULL;
     char recv_buf[RECV_BUF_LEN];
     int  recv_bytes = 0;
     int  send_bytes; //= sizeof(send_data);
@@ -766,32 +776,45 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
         if (ret > 0) {
             UDPLGP("sent OK\n");
 
-            //wolfSSL_shutdown(ssl); //by shutting down the connection before even reading, we reduce the payload to the minimum
             ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
             if (ret > 0) {
-                recv_buf[ret]=0; //error checking, e.g. not result=206
-                printf("%s\n",recv_buf);
-                location=ota_strstr(recv_buf,"http/1.1 ");
-//                 strchr(location,' ')[0]=0;
-                location+=9; //flush "HTTP/1.1 "
-                slash=atoi(location);
+                recv_buf[ret]=0; //prevent falling of the end of the buffer when doing string operations
+                found_ptr=ota_strstr(recv_buf,"http/1.1 ");
+                found_ptr+=9; //flush "HTTP/1.1 "
+                slash=atoi(found_ptr);
                 UDPLGP("HTTP returns %d\n",slash);
                 if (slash!=302) {
                     wolfSSL_free(ssl);
                     lwip_close(socket);
                     return -1;
                 }
-//                 recv_buf[strlen(recv_buf)]=' '; //for further headers
-                location=ota_strstr(recv_buf,"\nlocation:");
-                strchr(location,'\r')[0]=0;
-		        if (location[10] == ' ') location++;
-                location+=18; //flush Location: https://
-                //printf("%s\n",location);
             } else {
                 UDPLGP("failed, return [-0x%x]\n", -ret);
                 ret=wolfSSL_get_error(ssl,ret);
                 UDPLGP("wolfSSL_send error = %d\n", ret);
+                return -1;
             }
+            while (1) {
+                recv_buf[ret]=0; //prevent falling of the end of the buffer when doing string operations
+                found_ptr=ota_strstr(recv_buf,"\nlocation:");
+                if (found_ptr) break;
+                wolfSSL_read(ssl, recv_buf, RECV_BUF_LEN - 12);
+                ret = wolfSSL_peek(ssl, recv_buf, RECV_BUF_LEN - 1);
+                if (ret <= 0) {
+                    UDPLGP("failed, return [-0x%x]\n", -ret);
+                    ret=wolfSSL_get_error(ssl,ret);
+                    UDPLGP("wolfSSL_send error = %d\n", ret);
+                    return -1;
+                }
+            }
+            ret=wolfSSL_read(ssl, recv_buf, found_ptr-recv_buf + 11); //flush all previous material
+            ret=wolfSSL_read(ssl, recv_buf, RECV_BUF_LEN - 1); //this starts for sure with the content of "Location: "
+            recv_buf[ret]=0; //prevent falling of the end of the buffer when doing string operations
+            strchr(recv_buf,'\r')[0]=0;
+            found_ptr=recv_buf;
+            //if (found_ptr[0] == ' ') found_ptr++;
+            found_ptr+=8; //flush https://
+            //printf("location=%s\n",found_ptr);
         } else {
             UDPLGP("failed, return [-0x%x]\n", -ret);
             ret=wolfSSL_get_error(ssl,ret);
@@ -814,26 +837,26 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     
     } else { //emergency mode, repo is expected to have the format "not.github.com/somewhere/"
         strcpy(recv_buf,repo);
-        location=recv_buf;
-        if (location[strlen(location)-1]!='/') strcat(location, "/");
-        strcat(location, file);
-        UDPLGP("emergency GET http://%s\n",location);
-    } //location now contains the url without https:// or http://
+        found_ptr=recv_buf;
+        if (found_ptr[strlen(found_ptr)-1]!='/') strcat(found_ptr, "/");
+        strcat(found_ptr, file);
+        UDPLGP("emergency GET http://%s\n",found_ptr);
+    } //found_ptr now contains the url without https:// or http://
     //process the Location
-    strcat(location, REQUESTTAIL);
-    slash=strchr(location,'/')-location;
-    location[slash]=0; //cut behind the hostname
-    char * host2=malloc(strlen(location));
-    strcpy(host2,location);
+    strcat(found_ptr, REQUESTTAIL);
+    slash=strchr(found_ptr,'/')-found_ptr;
+    found_ptr[slash]=0; //cut behind the hostname
+    char * host2=malloc(strlen(found_ptr));
+    strcpy(host2,found_ptr);
     //printf("next host: %s\n",host2);
 
     retc = ota_connect(host2, port, &socket, &ssl);  //release socket and ssl when ready
 
-    strcat(strcat(location+slash+1,host2),RANGE); //append hostname and range to URI    
-    location+=slash-4;
-    memcpy(location,REQUESTHEAD,5);
-    char * getlinestart=malloc(strlen(location));
-    strcpy(getlinestart,location);
+    strcat(strcat(found_ptr+slash+1,host2),RANGE); //append hostname and range to URI    
+    found_ptr+=slash-4;
+    memcpy(found_ptr,REQUESTHEAD,5);
+    char * getlinestart=malloc(strlen(found_ptr));
+    strcpy(getlinestart,found_ptr);
     //printf("request:\n%s\n",getlinestart);
     //if (!retc) {
     while (collected<length) {
@@ -855,26 +878,26 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
                     if (header) {
                         //printf("%s\n-------- %d\n", recv_buf, ret);
                         //parse Content-Length: xxxx
-                        location=ota_strstr(recv_buf,"\ncontent-length:");
-                        strchr(location,'\r')[0]=0;
-                        location+=16; //flush Content-Length://
-			            //if (location[0] == ' ') location++; //flush a space, atoi would also do that
-                        clength=atoi(location);
-                        location[strlen(location)]='\r'; //in case the order changes
+                        found_ptr=ota_strstr(recv_buf,"\ncontent-length:");
+                        strchr(found_ptr,'\r')[0]=0;
+                        found_ptr+=16; //flush Content-Length://
+			            //if (found_ptr[0] == ' ') found_ptr++; //flush a space, atoi would also do that
+                        clength=atoi(found_ptr);
+                        found_ptr[strlen(found_ptr)]='\r'; //in case the order changes
                         //parse Content-Range: bytes xxxx-yyyy/zzzz
-                        location=ota_strstr(recv_buf,"\ncontent-range:");
-                        strchr(location,'\r')[0]=0;
-                        location+=15; //flush Content-Range://
-                        location=ota_strstr(recv_buf,"bytes ");
-                        location+=6; //flush Content-Range: bytes //
-                        location=strstr(location,"/"); location++; //flush /
-                        length=atoi(location);
-                        location[strlen(location)]='\r'; //search the entire buffer again
-                        location=strstr(recv_buf,CRLFCRLF)+4; //go to end of header
-                        if ((left=ret-(location-recv_buf))) {
+                        found_ptr=ota_strstr(recv_buf,"\ncontent-range:");
+                        strchr(found_ptr,'\r')[0]=0;
+                        found_ptr+=15; //flush Content-Range://
+                        found_ptr=ota_strstr(recv_buf,"bytes ");
+                        found_ptr+=6; //flush Content-Range: bytes //
+                        found_ptr=strstr(found_ptr,"/"); found_ptr++; //flush /
+                        length=atoi(found_ptr);
+                        found_ptr[strlen(found_ptr)]='\r'; //search the entire buffer again
+                        found_ptr=strstr(recv_buf,CRLFCRLF)+4; //go to end of header
+                        if ((left=ret-(found_ptr-recv_buf))) {
                             header=0; //we have body in the same IP packet as the header so we need to process it already
                             ret=left;
-                            memmove(recv_buf,location,left); //move this payload to the head of the recv_buf
+                            memmove(recv_buf,found_ptr,left); //move this payload to the head of the recv_buf
                         }
                     }
                     if (!header) {

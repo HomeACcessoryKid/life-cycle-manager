@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.0 more robust parsing of Location header and added ota_string
+- even long headers existing before the Location header will be parsable
+- ota_string sysparam added to pass configuration to user app
+
 ## 2.1.2 creating smaller otamain.bin with -Os
 - because 2.1.1 otamain was too big and clobbered sysparam area
 
