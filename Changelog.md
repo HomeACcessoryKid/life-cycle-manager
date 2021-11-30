@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.1 fixed support for ECDHE in TLS protocol
+- even though these protocols were offered in the ClientHello, they were broken
+- the supporting extensions were missing and the server never selected them
+
 ## 2.2.0 more robust parsing of Location header and added ota_string
 - even long headers existing before the Location header will be parsable
 - ota_string sysparam added to pass configuration to user app
