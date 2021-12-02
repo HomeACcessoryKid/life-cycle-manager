@@ -1,32 +1,6 @@
 # Life-Cycle-Manager (LCM)
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
-(c) 2018-2021 HomeAccessoryKid
-
-### February 2021
-Due to GitHub changing their server, it is needed to update your devices before 23 of March.  
-ALSO, it is possible to recover devices with LCM version before 1.9.1 again.
-See issue [#29](https://github.com/HomeACcessoryKid/life-cycle-manager/issues/29) for details
-
-### OUTAGE caused by GitHub change of HTTP headers
-Good news and bad news. Version 2.0.0+ is here and it works and is protected. But you have to solder a serial port again.
-
-Yes, it really really doesn't work any more for versions < 1.9.1. 
-After a long time we got a response from GitHub [#23](https://github.com/HomeACcessoryKid/life-cycle-manager/issues/23).
-I learned that with HTTP/2 the headers are expected to be lowercase
-always. This means that GitHub is making their infrastructure ready for the future and I agree it makes sense for them.
-So, I accept our loss and that it was my lack of knowing that a HTTP header has to be case insensitive that caused all this.
-
-You will have to access the device again via the serial port and flash a new otaboot.bin file
-- download the latest [otaboot.bin](https://github.com/HomeACcessoryKid/life-cycle-manager/releases/latest/download/otaboot.bin)
-- `esptool.py -p /dev/cu.usbserial-* write_flash 0x2000 ~/Downloads/otaboot.bin`
-
-This will preserve all other info in your device like homekit pairing, wifi, etc. unless you stored them below 0x6D000  
-It will take up to 8 minutes to update, so be patient.
-
-The emergency mode (see 'how it works') is completly independent of external factors.  
-If this ever happens again, this emergency mode is the plan B we have in place.  
-If you feel that you want to [switch over to HAA-OTA](https://github.com/RavenSystem/esp-homekit-devices/wiki/Installation) 
-then this is the moment to verify if it provides the features you are looking for. We forked apart some time ago.
+(c) 2018-2022 HomeAccessoryKid
 
 ## Version
 [Changelog](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/Changelog.md)  
@@ -36,7 +10,10 @@ Setting a value for a led_pin visual feedback is possible.
 By having introduced the latest-pre-release concept in version 1.0.0, users (and LCM itself) can test new software before exposing it to production devices.
 See the 'How to use it' section.
 
-Meanwhile, at https://github.com/HomeACcessoryKid/ota version 0.3.0 is the version that will transfer a 0.1.0 release used by early starters whenever they trigger an update.
+In  version 2.2.x there is a new possibility for those user apps that need some configuration data to work that is specific to each instantiation.
+One can set the ota_string parameter which can be parsed by the user app to set e.g. MQTT server, user and password or whatever else you fancy.
+Since it is to the user app to parse it, you test whatever works for you within the cgi transfer of parameters.
+Using the 'erase wifi' mode, new settings can also be set again when needed.
 
 https://github.com/HomeACcessoryKid/ota-demo has been upgraded to offer system-parameter editing features which allows for flexible testing of the LCM code.
 
@@ -44,6 +21,7 @@ https://github.com/HomeACcessoryKid/ota-demo has been upgraded to offer system-p
 This is a program that allows any simple repository based on esp-open-rtos on esp8266 to solve its life cycle tasks.
 - assign a WiFi AccessPoint for internet connectivity
 - specify and install the user app without flashing over cable (once the LCM image is in)
+- assign app specific and device specific parameters
 - update the user app over the air by using releases and versions on GitHub
 
 ## New feature version 2
@@ -62,7 +40,7 @@ For these values the behaviour is controlled through the sysparam string `ota_co
 The default value of 3 reduces the chance of user misscounting and triggering something else than intended or playfull children.
 
 Note that with LCM_beta mode and wifi erased you can set any emergency fallback server to collect a new signed version of otaboot.bin.
-This is to prevent a lockout as witnessed when Github changed their webserver.  
+This is to prevent a lockout as witnessed when Github changed their webserver in 2020.  
 Tested with macOS [builtin apache server](https://discussions.apple.com/docs/DOC-13841).  
 By monitoring the output with the terminal command `nc -kulnw0 45678` you have 10 seconds to see which action was chosen before it executes.
 
@@ -146,7 +124,7 @@ User device setup part
 - upload these three files:
 ```
 0x0    /Volumes/ESPopenHK/esp-open-rtos//bootloader/firmware_prebuilt/rboot.bin
-0x1000 /Volumes/ESPopenHK/esp-open-rtos//bootloader/firmware_prebuilt/blank_config.bin \
+0x1000 /Volumes/ESPopenHK/esp-open-rtos//bootloader/firmware_prebuilt/blank_config.bin
 0x2000 versions/x.y.zv/otaboot.bin
 ```
 - (or otabootbeta.bin if enrolling in the LCM pre-release testing)

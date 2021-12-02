@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.2 updated README and fixed wifi-config repo commit
+- removed now outdated info from README
+- the commit to wifi-config was not synced to github and got rolled back
+  which meant that the hash code changed, even though the code did not...
+  now added one cosmetic change after all
+
 ## 2.2.1 fixed support for ECDHE in TLS protocol
 - even though these protocols were offered in the ClientHello, they were broken
 - the supporting extensions were missing and the server never selected them
