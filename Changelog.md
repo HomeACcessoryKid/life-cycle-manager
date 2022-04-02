@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.3 updated GitHub root CA certificate
+- since the new certificates use EllipticCurve, versions prior to 2.2.1 crash when checking cert
+- note that the usage of EC makes the TLS process a lot slower
+
 ## 2.2.2 updated README and fixed wifi-config repo commit
 - removed now outdated info from README
 - the commit to wifi-config was not synced to github and got rolled back

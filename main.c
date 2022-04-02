@@ -1,4 +1,4 @@
-/* (c) 2018-2021 HomeAccessoryKid
+/* (c) 2018-2022 HomeAccessoryKid
  * LifeCycleManager dual app
  * use local.mk to turn it into the LCM otamain.bin app or the otaboot.bin app
  */

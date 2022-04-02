@@ -1,4 +1,4 @@
-/*  (c) 2018-2021 HomeAccessoryKid */
+/*  (c) 2018-2022 HomeAccessoryKid */
 #ifndef __OTA_H__
 #define __OTA_H__
 
