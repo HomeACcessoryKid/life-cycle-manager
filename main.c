@@ -115,13 +115,7 @@ void ota_task(void *arg) {
                 ota_swap_cert_sector();
                 ota_get_pubkey(active_cert_sector);
             } //certificates are good now
-            ota_set_verify(1); //reject faked server
-            if (ota_version) free(ota_version);
-            ota_version=ota_get_version(OTAREPO);
-            if (ota_get_hash(OTAREPO, ota_version, CERTFILE, &signature)) { //testdownload, if server is fake will trigger
-                //report by syslog?  //trouble, so abort
-                break; //leads to boot=0
-            }
+            
             if (ota_boot()) { //running the ota-boot software now
 #ifdef OTABOOT    
                 //take care our boot code gets a signature by loading it in boot1sector just for this purpose
@@ -172,10 +166,12 @@ void ota_task(void *arg) {
                     if (ota_compare(new_version,btl_version)>0) { //can only upgrade
                         UDPLGP("BTLREPO=\'%s\' new_version=\'%s\' BTLFILE=\'%s\'\n",BTLREPO,new_version,BTLFILE);
                         if (!ota_get_hash(BTLREPO, new_version, BTLFILE, &signature)) {
-                            file_size=ota_get_file(BTLREPO,new_version,BTLFILE,backup_cert_sector);
-                            if (file_size>0 && !ota_verify_hash(backup_cert_sector,&signature)) {
-                                ota_finalize_file(backup_cert_sector);
-                                ota_copy_bootloader(backup_cert_sector, file_size, new_version); //transfer it to sector zero
+                            if (!ota_verify_signature(&signature)) {
+                                file_size=ota_get_file(BTLREPO,new_version,BTLFILE,backup_cert_sector);
+                                if (file_size>0 && !ota_verify_hash(backup_cert_sector,&signature)) {
+                                    ota_finalize_file(backup_cert_sector);
+                                    ota_copy_bootloader(backup_cert_sector, file_size, new_version); //transfer it to sector zero
+                                }
                             }
                         } //else maybe next time more luck for the bootloader
                     } //no bootloader update 
@@ -183,13 +179,14 @@ void ota_task(void *arg) {
                 //if there is a newer version of ota-main...
                 if (ota_compare(ota_version,OTAVERSION)>0) { //set OTAVERSION when running make and match with github
                     ota_get_hash(OTAREPO, ota_version, BOOTFILE, &signature);
-                    if (ota_verify_signature(&signature)) continue; //signature file is not signed by our key, ABORT
+                    if (ota_verify_signature(&signature)) break; //signature file is not signed by our key, ABORT
                     file_size=ota_get_file(OTAREPO,ota_version,BOOTFILE,BOOT0SECTOR);
                     if (file_size<=0) continue; //something went wrong, but now boot0 is broken so start over
                     if (ota_verify_hash(BOOT0SECTOR,&signature)) continue; //download failed
                     ota_finalize_file(BOOT0SECTOR);
                     break; //leads to boot=0 and starts self-updating/otaboot-app
                 } //ota code is up to date
+                ota_set_verify(1); //reject faked server only for user_repo
                 if (new_version) free(new_version);
                 new_version=ota_get_version(user_repo);
                 if (ota_compare(new_version,user_version)>0) { //can only upgrade
@@ -199,7 +196,7 @@ void ota_task(void *arg) {
                         if (file_size<=0 || ota_verify_hash(BOOT0SECTOR,&signature)) continue; //something went wrong, but now boot0 is broken so start over
                         ota_finalize_file(BOOT0SECTOR); //TODO return status and if wrong, continue
                         ota_write_status(new_version); //we have been successful, hurray!
-                    } else continue; //user did not supply a proper sig file -> enter the loop
+                    } else break; //user did not supply a proper sig file or fake server -> return to boot0
                 } //nothing to update
                 break; //leads to boot=0 and starts updated user app
 #endif

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.4 TEST: new scheme without initial certificate checking
+- to test, made it broken without EC support (like 2.2.0)
+- added a sysparam ota_count to set LCM outcomes also from user space
+- now requires a full signature on rboot4lcm binary
+- flow diagram not yet updated
+
 ## 2.2.3 updated GitHub root CA certificate
 - since the new certificates use EllipticCurve, versions prior to 2.2.1 crash when checking cert
 - note that the usage of EC makes the TLS process a lot slower

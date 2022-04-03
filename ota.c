@@ -56,10 +56,10 @@ char *ota_strstr(const char *full_string, const char *search) { //lowercase vers
 
 void  ota_read_rtc() {
     UDPLGP("--- ota_read_rtc\n");
-	int sector,count=0;
+	int sector,count=0,user_count=0;
 	int count_step=3;
     sysparam_status_t status;
-    char *value;
+    char *value=NULL;
     bool reset_wifi=0;
     bool reset_otabeta=0;
     bool factory_reset=0;
@@ -72,10 +72,17 @@ void  ota_read_rtc() {
             if (*value<0x34 && *value>0x30 && strlen(value)==1) count_step=*value-0x30;
             free(value);
         }
+        status = sysparam_get_string("ota_count", &value);
+        if (status == SYSPARAM_OK) {
+            user_count=atoi(value);
+            sysparam_set_string("ota_count","");
+            free(value);
+        }
     }
     UDPLGP("--- count_step=%d\n",count_step);
     
 	if (rboot_get_rtc_data(&rtc)) count=rtc.temp_rom;
+	if (count<2) count=user_count;
     
     UDPLGP("--- count=%d\n",count);
     if      (count<5+count_step*1) { //standard ota-main or ota-boot behavior
@@ -963,6 +970,8 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     }
     free(host2);
     free(getlinestart);
+    if (retc) return retc;
+    if (ret < 0) return ret;
     return collected;
 }
 
