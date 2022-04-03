@@ -2,11 +2,12 @@
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
 (c) 2018-2022 HomeAccessoryKid
 
-## ISSUE with GitHub introduction of Elliptic Curve based certificates
+## NO ISSUE with GitHub introduction of Elliptic Curve based certificates
 #### starting 1 April 2022
-Since the new certificates use EllipticCurve, versions prior to v2.2.1 crash when checking certificate validity.
-This means the need to use the EMERGENCY MODE to repair your LCM deployment.
-v2.2.3 will already provide a working LCM.  
+IT DOES NOT BREAK, a misunderstanding from my side
+When updating the root certificate, I forgot to add an old root CA to the file
+Fixed 3 April 18:50 CEST
+
 But check back later because next I want to make a version that will
 make the update of LCM or bootloader itself not depend on certificate validation but only on signature.  
 The verification of the GitHub certificate remains a necessity to validate the user main.bin file.
