@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.5 updated certificates to be identical across all versions
+- contains DigiCertGlobalRootCA and DigiCertHighAssuranceEVRootCA
+- EC support put back in place
+- flow diagram still not updated
+
 ## 2.2.4 TEST: new scheme without initial certificate checking
 - to test, made it broken without EC support (like 2.2.0)
 - added a sysparam ota_count to set LCM outcomes also from user space
