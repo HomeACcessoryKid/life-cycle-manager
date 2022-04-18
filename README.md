@@ -2,28 +2,18 @@
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
 (c) 2018-2022 HomeAccessoryKid
 
-## NO ISSUE with GitHub introduction of Elliptic Curve based certificates
-#### starting 1 April 2022
-IT DOES NOT BREAK, a misunderstanding from my side
-When updating the root certificate, I forgot to add an old root CA to the file
-Fixed 3 April 18:50 CEST
-
-But check back later because next I want to make a version that will
-make the update of LCM or bootloader itself not depend on certificate validation but only on signature.  
-The verification of the GitHub certificate remains a necessity to validate the user main.bin file.
+## Update season 16 April 2022
+After 14 months, version 2.1.2 will get upgraded to version 2.2.5. So be aware your own app update will take extra long.  
+It would be recommendable to also update devices that do not have an user app update.  
+Not that 2.1.2 is broken or in danger, but 2.2.5 is more future proof.
 
 ## Version
 [Changelog](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/Changelog.md)  
 With version 2.0.0 LCM has arrived to a new stage with its own adaptation of rboot - rboot4lcm - which counts powercycles.
-These are used to check updates, reset wifi clear or set LCM_beta or factory reset. It also gives access to the emergency mode.  
+These are used to check updates, reset wifi, clear or set LCM_beta or factory reset. It also gives access to the emergency mode.  
 Setting a value for a led_pin visual feedback is possible.
 By having introduced the latest-pre-release concept in version 1.0.0, users (and LCM itself) can test new software before exposing it to production devices.
 See the 'How to use it' section.
-
-In  version 2.2.x there is a new possibility for those user apps that need some configuration data to work that is specific to each instantiation.
-One can set the ota_string parameter which can be parsed by the user app to set e.g. MQTT server, user and password or whatever else you fancy.
-Since it is to the user app to parse it, you test whatever works for you within the cgi transfer of parameters.
-Using the 'erase wifi' mode, new settings can also be set again when needed.
 
 https://github.com/HomeACcessoryKid/ota-demo has been upgraded to offer system-parameter editing features which allows for flexible testing of the LCM code.
 
@@ -34,7 +24,7 @@ This is a program that allows any simple repository based on esp-open-rtos on es
 - assign app specific and device specific parameters
 - update the user app over the air by using releases and versions on GitHub
 
-## New feature version 2
+## New features version 2
 
 This new LCM code is able to load/update the bootloader from github.  
 The new bootloader is able to count the amount of short power cycles (<1.5s)  
@@ -73,6 +63,15 @@ If `ota_count_step=="1"`
 - 8: factory reset (communicate 8 to user)
 
 Missing or other `ota_count_step` values will be interpreted as 3
+
+In version 2.2.5 there are two new features:
+There is a new possibility for those user apps that need some configuration data to work that is specific to each instantiation.
+One can set the `ota_string` parameter which can be parsed by the user app to set e.g. MQTT server, user and password or whatever else you fancy.
+Since it is up to the user app to parse it, you test whatever works for you within the cgi transfer of parameters.
+Also, using the 'erase wifi' mode, new settings can be set again when needed.
+
+There also exists the possibility to set the sysparam `ota_count` to activate the 'erase wifi' etc from the user app as well.
+
 
 ## Non-typical solution
 The solution is dedicated to a particular set of repositories and devices, which I consider is worth solving.
@@ -133,13 +132,13 @@ User device setup part
 - wipe out the entire flash (not essential, but cleaner)
 - upload these three files:
 ```
-0x0    /Volumes/ESPopenHK/esp-open-rtos//bootloader/firmware_prebuilt/rboot.bin
-0x1000 /Volumes/ESPopenHK/esp-open-rtos//bootloader/firmware_prebuilt/blank_config.bin
-0x2000 versions/x.y.zv/otaboot.bin
+0x0    <path_to>/esp-open-rtos/bootloader/firmware_prebuilt/rboot.bin
+0x1000 <path_to>/esp-open-rtos/bootloader/firmware_prebuilt/blank_config.bin
+0x2000 <release>/otaboot.bin
 ```
 - (or otabootbeta.bin if enrolling in the LCM pre-release testing)
 - start the code and either use serial input menu or wait till the Wifi AP starts.  
-- set the repository you want to use in your device. yourname/repository  and name of binary
+- set the repository you want to use in your device: `yourname/repository`  and name of binary
 - then select your Wifi AP and insert your password
 - once selected, it will take up to 5 minutes for the system to download the ota-main software in the second bootsector and the user code in the 1st boot sector
 - you can follow progress on the serial port or use the UDPlogger using the terminal command `nc -kulnw0 45678`
@@ -155,7 +154,7 @@ printf "%08x" `cat firmware/main.bin | wc -c`| xxd -r -p >>firmware/main.bin.sig
 This design serves to read through the code base.
 The actual entry point of the process is the self-updater which is called ota-boot and which is flashed by serial cable.
 
-![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v4.png)
+![](https://github.com/HomeACcessoryKid/life-cycle-manager/blob/master/design-v5.png)
 
 ### Concepts
 ```
@@ -202,12 +201,6 @@ Using the available public key, the validity is verified.
 From here, the files are intended to be downloaded with server certificate verification activated. If this fails, the server is marked as invalid.
 
 ```
-server valid?
-```
-If in the previous steps the server is marked invalid, we return to the main app in boot slot 0 and we report by syslog to a server (to be determinded) so we learn that github has changed its certificate CA provider and HomeACessoryKid can issue a new certificate sector.  
-Now that the downloading from GitHub has been secured, we can trust whatever we download based on a checksum.
-
-```
 new boot version?
 ```
 This will download the latest version of [rboot4lcm](https://github.com/HomeACcessoryKid/rboot4lcm)
@@ -216,14 +209,20 @@ This will download the latest version of [rboot4lcm](https://github.com/HomeACce
 new OTA version?
 download OTA-boot➔0
 update OTA-main➔1
-checksum OK?
+sig & checksum OK?
 ```
 
 We verify if there is an update of this OTA repo itself? If so, we use ota-boot to self update. After this we have the latest OTA code.
 
 ```
+server valid?
+```
+If by checking the certificates the server is marked invalid, we return to the main app in boot slot 0 and we report by syslog to a server (to be determinded) so we learn that github has changed its certificate CA provider and HomeACessoryKid can issue a new certificate sector.  
+Now that the downloading from GitHub has been secured, we can trust whatever we download based on a checksum.
+
+```
 OTA-main(1) updates User app➔0
-checksum OK?
+sig & checksum OK?
 ```
 Using the baseURL info and the version as stored in sysparam area, the latest binary is found and downloaded if needed. If the checksum does not work out, we return to the OTA app start point considering we cannot run the old code anymore.
 But normally we boot the new code and the mission is done.
