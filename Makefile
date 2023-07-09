@@ -9,7 +9,7 @@ EXTRA_COMPONENTS = \
 	$(abspath esp-wifi-config) \
 	$(abspath esp-wolfssl)
 
-FLASH_SIZE ?= 8
+FLASH_SIZE ?= 4MB
 
 EXTRA_WOLFSSL_CFLAGS = \
 	-DWOLFSSL_USER_SETTINGS \
