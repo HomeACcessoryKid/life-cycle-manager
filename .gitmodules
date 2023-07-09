@@ -1,3 +1,6 @@
 [submodule "esp-wolfssl"]
 	path = esp-wolfssl
 	url = https://github.com/HomeACcessoryKid/esp-wolfssl
+[submodule "esp-wifi-config"]
+	path = esp-wifi-config
+	url = https://github.com/doodles2000/esp-wifi-config
