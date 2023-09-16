@@ -5,9 +5,9 @@
 #ifndef OTAVERSION
  #error You must set OTAVERSION=x.y.z of the ota code to match github version tag x.y.z
 #endif
-#define OTAREPO  "HomeACcessoryKid/life-cycle-manager"
+#define OTAREPO  "Doodles2000/life-cycle-manager"
 //#define LCMREPO  "HomeACcessoryKid/life-cycle-manager"
-#define BTLREPO  "HomeACcessoryKid/rboot4lcm"
+#define BTLREPO  "Doodles2000/rboot4lcm"
 #define BTLFILE "rboot.bin"
 #define MAINFILE "otamain.bin"
 #define BOOTFILE "otaboot.bin"
