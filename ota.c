@@ -22,6 +22,9 @@
 
 #include <udplogger.h>
 
+#include <FreeRTOS.h>
+#include <esplibs/libmain.h> //for overclocking functions
+
 static int  verify = 1;
 static byte file_first_byte[]={0xff};
 ecc_key prvecckey;
@@ -582,12 +585,14 @@ void  ota_set_verify(int onoff) {
             UDPLGP("TIME: %s", ctime(&ts)); //we need to have the clock right to check certificates
             
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+            sdk_system_overclock(); //With verification, we are to slow for the 10s timeout of GitHub (end 2023)
         }
     } else {
         UDPLGP("OFF\n");
         if (verify==1) {
             verify= 0;
             wolfSSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+            sdk_system_restoreclock();
         }
     }
 }
@@ -619,7 +624,7 @@ char* ota_get_btl_version() {
     
     spiflash_read(SECTORSIZE-MAXVERSIONLEN, (byte *)versionbuff, MAXVERSIONLEN);
     if (versionbuff[0]!=0xff) { //TODO: make this more error resistant
-        version=malloc(strlen(versionbuff));
+        version=malloc(strlen(versionbuff)+1);
         strcpy(version,versionbuff);
     } else {
         version=malloc(6);
@@ -696,7 +701,7 @@ char* ota_get_version(char * repo) {
             strchr(recv_buf,'\r')[0]=0;
             found_ptr=ota_strstr(recv_buf,"releases/tag/");
             if (found_ptr[13]=='v' || found_ptr[13]=='V') found_ptr++;
-            version=malloc(strlen(found_ptr+13));
+            version=malloc(strlen(found_ptr+13)+1);
             strcpy(version,found_ptr+13);
             printf("%s@version:\"%s\" according to latest release\n",repo,version);
         } else {
@@ -853,7 +858,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     strcat(found_ptr, REQUESTTAIL);
     slash=strchr(found_ptr,'/')-found_ptr;
     found_ptr[slash]=0; //cut behind the hostname
-    char * host2=malloc(strlen(found_ptr));
+    char * host2=malloc(strlen(found_ptr)+1);
     strcpy(host2,found_ptr);
     //printf("next host: %s\n",host2);
 
@@ -862,7 +867,7 @@ int   ota_get_file_ex(char * repo, char * version, char * file, int sector, byte
     strcat(strcat(found_ptr+slash+1,host2),RANGE); //append hostname and range to URI    
     found_ptr+=slash-4;
     memcpy(found_ptr,REQUESTHEAD,5);
-    char * getlinestart=malloc(strlen(found_ptr));
+    char * getlinestart=malloc(strlen(found_ptr)+1);
     strcpy(getlinestart,found_ptr);
     //printf("request:\n%s\n",getlinestart);
     //if (!retc) {

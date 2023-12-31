@@ -1,6 +1,11 @@
 # Life-Cycle-Manager (LCM)
 Initial install, WiFi settings and over the air firmware upgrades for any esp-open-rtos repository on GitHub  
-(c) 2018-2022 HomeAccessoryKid
+(c) 2018-2024 HomeAccessoryKid
+
+## Update December 2023
+It looks like GitHub has put a 10s timeout on their TLS stack.  
+When verifying the server certificate, we take >15s and the server finishes the connection.  
+Version 2.2.6 tries to fix this by using overclock during this phase.
 
 ## Update season 16 April 2022
 After 14 months, version 2.1.2 will get upgraded to version 2.2.5. So be aware your own app update will take extra long.  

@@ -35,7 +35,8 @@ void ota_task(void *arg) {
 #ifdef OTABOOT    
     int have_private_key=0;
 #endif
-    int keyid,foundkey=0;
+    uint16_t keyid;
+    int foundkey=0;
     char keyname[KEYNAMELEN];
     
     ota_init();

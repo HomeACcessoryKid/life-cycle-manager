@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.6 overclocking and fix in version string processing
+- overclock in ota_set_verify=ON fixes tighter timeout applied by GitHub
+- version string malloc was 1 byte short
+- keyid now uint16_t
+
 ## 2.2.5 updated certificates to be identical across all versions
 - contains DigiCertGlobalRootCA and DigiCertHighAssuranceEVRootCA
 - EC support put back in place

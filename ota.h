@@ -42,7 +42,7 @@
 #define SIGNSIZE 104  //ECDSA r+s in ASN1 format secP384r1
 #define PKEYSIZE 120  //size of a pub key
 #define KEYNAME "public-%d.key"
-#define KEYNAMELEN 16 //allows for 9999 keys
+#define KEYNAMELEN 17 //allows for 65535 keys with uint16_t
 
 typedef unsigned char byte;
 

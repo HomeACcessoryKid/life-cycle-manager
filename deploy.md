@@ -1,4 +1,4 @@
-(c) 2018-2022 HomeAccessoryKid
+(c) 2018-2024 HomeAccessoryKid
 
 ### Instructions for end users:
 TBD
@@ -10,33 +10,42 @@ cd life-cycle-manager
 - initial steps to be expanded
 
 #### These are the steps if not introducing a new key pair
-- create/update the file versions1/latest-pre-release without new-line and setup 2.2.5 version folder
+- create/update the file versions1/latest-pre-release without new-line and setup 2.2.6 version folder
 ```
-mkdir versions1/2.2.5v
-echo -n 2.2.5 > versions1/2.2.5v/latest-pre-release
-cp versions1/certs.sector versions1/certs.sector.sig versions1/2.2.5v
-cp versions1/public*key*   versions1/2.2.5v
+mkdir versions1/2.2.6v
+echo -n 2.2.6 > versions1/2.2.6v/latest-pre-release
+cp versions1/certs.sector versions1/certs.sector.sig versions1/2.2.6v
+cp versions1/public*key*   versions1/2.2.6v
 ```
 - set local.mk to the ota-main program
 ```
-make -j6 rebuild OTAVERSION=2.2.5
-mv firmware/otamain.bin versions1/2.2.5v
+make -j6 rebuild OTAVERSION=2.2.6
+mv firmware/otamain.bin versions1/2.2.6v
 ```
 - set local.mk back to ota-boot program
 ```
-make -j6 rebuild OTAVERSION=2.2.5
-mv firmware/otaboot.bin versions1/2.2.5v
-make -j6 rebuild OTAVERSION=2.2.5 OTABETA=1
-cp firmware/otaboot.bin versions1/2.2.5v/otabootbeta.bin
+make -j6 rebuild OTAVERSION=2.2.6
+mv firmware/otaboot.bin versions1/2.2.6v
+make -j6 rebuild OTAVERSION=2.2.6 OTABETA=1
+cp firmware/otaboot.bin versions1/2.2.6v/otabootbeta.bin
 ```
 - remove the older version files
 #
 - update Changelog
 - if you can sign the binaries locally, do so, else follow later steps
+```
+~/bin/ecc_signer otaboot.bin ../secp384r1prv.der ../secp384r1pub.der
+printf "%08x" `cat otaboot.bin | wc -c`| xxd -r -p > len
+cat hash len sign > otaboot.bin.sig
+~/bin/ecc_signer otamain.bin ../secp384r1prv.der ../secp384r1pub.der
+printf "%08x" `cat otamain.bin | wc -c`| xxd -r -p > len
+cat hash len sign > otamain.bin.sig
+rm hash len sign
+```
 - test otaboot for basic behaviour
 - commit and sync submodules
-- commit and sync this as version 2.2.5  
-- set up a new github release 2.2.5 as a pre-release using the just commited master...  
+- commit and sync this as version 2.2.6  
+- set up a new github release 2.2.6 as a pre-release using the just commited master...  
 - upload the certs and binaries to the pre-release assets on github  
 #
 - erase the flash and upload the privatekey
@@ -46,18 +55,18 @@ esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versions1-pr
 ```
 - upload the ota-boot BETA program to the device that contains the private key
 ```
-make flash OTAVERSION=2.2.5 OTABETA=1
+make flash OTAVERSION=2.2.6 OTABETA=1
 ```
 - power cycle to prevent the bug for software reset after flash  
 - setup wifi and select the ota-demo repo without pre-release checkbox  
 - create the 2 signature files next to the bin file and upload to github one by one  
 - verify the hashes on the computer  
 ```
-openssl sha384 versions1/2.2.5v/otamain.bin
-xxd versions1/2.2.5v/otamain.bin.sig
+openssl sha384 versions1/2.2.6v/otamain.bin
+xxd versions1/2.2.6v/otamain.bin.sig
 ```
 
-- upload the file versions1/2.2.5v/latest-pre-release to the 'latest release' assets on github
+- upload the file versions1/2.2.6v/latest-pre-release to the 'latest release' assets on github
 
 #### Testing
 
@@ -110,7 +119,7 @@ esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versionsN-1-
 ```
 - collect public-1.key.sig and store it in the new version folder and copy it to versions1
 ```
-cp  versions1/2.2.5v/public-1.key.sig versions1
+cp  versions1/2.2.6v/public-1.key.sig versions1
 ```
 - then flash the new private key
 ```
@@ -118,6 +127,6 @@ esptool.py -p /dev/cu.usbserial-* --baud 230400 write_flash 0xf9000 versions1-pr
 ```
 - collect cert.sector.sig and store it in the new version folder and copy it to versions1 
 ```
-cp  versions1/2.2.5v/certs.sector.sig versions1
+cp  versions1/2.2.6v/certs.sector.sig versions1
 ```
 - continue with a normal deployment to create the 2 signature files next to the bin files
