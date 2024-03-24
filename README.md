@@ -135,8 +135,9 @@ Now test your new code by using a device that you enroll to the pre-release vers
 User device setup part  
 - clone or fork the LCM repository (or download just the otaboot.bin file)
 - wipe out the entire flash (not essential, but cleaner)
-- upload these three files:
+- upload these three files making sure to specify a 1MByte flash size:
 ```
+esptool.py write_flash -fs 1MB
 0x0    <path_to>/esp-open-rtos/bootloader/firmware_prebuilt/rboot.bin
 0x1000 <path_to>/esp-open-rtos/bootloader/firmware_prebuilt/blank_config.bin
 0x2000 <release>/otaboot.bin

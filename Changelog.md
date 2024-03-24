@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.6+ Certificates updated
+- GitHub updated their server certificates so need for new Root CA certs
+- and install clarification in README
+
 ## 2.2.6 overclocking and fix in version string processing
 - overclock in ota_set_verify=ON fixes tighter timeout applied by GitHub
 - version string malloc was 1 byte short
